@@ -36,27 +36,38 @@ job "traefik" {
 [entryPoints]
   [entryPoints.web]
   address = ":80"
+  [entryPoints.web.http.redirections.entryPoint]
+    to = "websecure"
+    scheme = "https"
+
   [entryPoints.websecure]
   address = ":443"
+
   [entryPoints.traefik]
   address = ":8080"
 
 [api]
-    dashboard = true
-    insecure  = true
+  dashboard = true
+  insecure  = true
+  debug = true
 
 [providers.consulCatalog]
-    prefix           = "traefik"
-    exposedByDefault = false
-    [providers.consulCatalog.endpoint]
-      address = "127.0.0.1:8500"
-      scheme  = "http"
+  prefix = "traefik"
+  exposedByDefault = false
+  [providers.consulCatalog.endpoint]
+    address = "127.0.0.1:8500"
+    scheme  = "http"
 
 [providers.nomad]
-    prefix = "traefik"
-    exposedByDefault = false
-    [providers.nomad.endpoint]
-      address = "127.0.0.1:4646"
+  prefix = "traefik"
+  [providers.nomad.endpoint]
+    address = "http://127.0.0.1:4646"
+
+[certificatesResolvers.lets-encrypt.acme]
+  email = "jamesthackett1@gmail.com"
+  storage = "local/acme.json"
+  [certificatesResolvers.lets-encrypt.acme.tlsChallenge]
+
 EOF
         destination = "/local/traefik.toml"
       }
