@@ -11,7 +11,7 @@ job "traefik" {
         static = 443
       }
       port "admin"{
-        static = 8080
+        static = 8081
       }
     }
 
@@ -44,7 +44,7 @@ job "traefik" {
   address = ":443"
 
   [entryPoints.traefik]
-  address = ":8080"
+  address = ":8081"
 
 [api]
   dashboard = true
