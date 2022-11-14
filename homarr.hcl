@@ -36,26 +36,11 @@ job "homarr" {
         image = "ghcr.io/ajnart/homarr:latest"
 	ports = ["http"]
 
-	mount {
-	  type = "bind"
-          target = "/app/data/configs"
-          source = "/data/homarr/configs"
-          readonly = false
-	}
-
-	mount {
-	  type = "bind"
-          target = "/app/public/icons"
-          source = "/data/homarr/icons"
-          readonly = false
-	}
-
-	mount {
-	  type = "bind"
-          target = "/app/public/img"
-          source = "/data/homarr/img"
-          readonly = false
-	}
+	volumes = [
+	  "/data/homarr/configs:/app/data/configs",
+	  "/data/homarr/icons:/app/public/icons",
+	  "/data/homarr/img:/app/public/img"
+	]
       }
     }
   }
