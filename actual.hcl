@@ -37,6 +37,10 @@ job "actual" {
       config {
 	image = "jlongster/actual-server"
 	ports = ["http"]
+	#volumes = [
+	#  "/data/actual/server:/app/server-files",
+        #  "/data/actual/user:/app/user-files"
+	#]
       }
     }
   }
