@@ -1,7 +1,11 @@
 job "traefik" {
   datacenters = ["dc1"]
-  type        = "system"
+  type        = "service"
 
+  constraint {
+    attribute = "${attr.unique.hostname}"
+    value     = "hermes"
+  }
   group "traefik" {
     network {
       port "http"{
@@ -28,6 +32,7 @@ job "traefik" {
         
         volumes = [
           "local/traefik.toml:/etc/traefik/traefik.toml",
+	  "local/traefik_dynamic.toml:/etc/traefik/traefik_dynamic.toml"
         ]
       }
 
@@ -68,8 +73,35 @@ job "traefik" {
   storage = "local/acme.json"
   [certificatesResolvers.lets-encrypt.acme.tlsChallenge]
 
+[providers.file]
+  filename = "local/traefik_dynamic.toml"
 EOF
-        destination = "/local/traefik.toml"
+        destination = "local/traefik.toml"
+      }
+
+      template {
+ 	data = <<EOH
+[http.routers.synophotos]
+  rule = "Host(`photos.dbyte.xyz`)"
+  entryPoints = ["websecure"]
+  service = "synophotos"
+  [http.routers.synophotos.tls]
+    certResolver = "lets-encrypt"
+
+[[http.services.synophotos.loadBalancer.servers]]
+  url = "http://192.168.1.5:5007/"
+
+[http.routers.synodrive]
+  rule = "Host(`drive.dbyte.xyz`)"
+  entryPoints = ["websecure"]
+  service = "synodrive"
+  [http.routers.synodrive.tls]
+    certResolver = "lets-encrypt"
+
+[[http.services.synodrive.loadBalancer.servers]]
+  url = "http://192.168.1.5:5002/"
+EOH
+        destination = "local/traefik_dynamic.toml"
       }
     }
   }

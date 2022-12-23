@@ -35,6 +35,7 @@ job "hedgedoc" {
 	"traefik.http.routers.md.rule=Host(`md.james-hackett.ie`)",
 	"traefik.http.routers.md.tls=true",
 	"traefik.http.routers.md.tls.certresolver=lets-encrypt",
+	"alloc=${NOMAD_ALLOC_ID}"
       ]
     }
 
@@ -80,13 +81,6 @@ job "hedgedoc" {
       config {
         image = "postgres:9.6"
         ports = ["db"]
-
-	mount {
-	  type = "bind"
-	  target = "/var/lib/postgresql"
-	  source = "/data/hedgedoc/database"
-	  readonly = false
-	}
       }
     }
   }
