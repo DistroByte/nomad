@@ -31,14 +31,24 @@ job "vikunja" {
     task "vikunja-api" {
       driver = "docker"
 
-      env {
-        VIKUNJA_DATABASE_HOST = "${NOMAD_IP_db}"
-        VIKUNJA_DATABASE_PASSWORD = "supersecret"
-        VIKUNJA_DATABASE_TYPE = "mysql"
-        VIKUNJA_DATABASE_USER = "vikunja"
-        VIKUNJA_DATABASE_DATABASE = "vikunja"
-        VIKUNJA_SERVICE_JWTSECRET = "abwdajdbakwjdbajdbkwajbdsmakmdlwka"
-        VIKUNJA_SERVICE_FRONTENDURL = "https://todo.dbyte.xyz/"
+      template {
+        data = <<EOH
+VIKUNJA_DATABASE_HOST="{{ env "NOMAD_IP_db" }}"
+VIKUNJA_DATABASE_PASSWORD="{{ key "vikunja/db/password" }}"
+VIKUNJA_DATABASE_TYPE="mysql"
+VIKUNJA_DATABASE_USER="{{ key "vikunja/db/username" }}"
+VIKUNJA_DATABASE_DATABASE="{{ key "vikunja/db/database" }}"
+VIKUNJA_SERVICE_JWTSECRET="{{ key "vikunja/jwtsecret" }}"
+VIKUNJA_SERVICE_FRONTENDURL="https://todo.dbyte.xyz/"
+VIKUNJA_MAILER_ENABLED="true"
+VIKUNJA_MAILER_HOST="{{ key "mail/distrobyte/host" }}"
+VIKUNJA_MAILER_PORT="{{ key "mail/distrobyte/port" }}"
+VIKUNJA_MAILER_USERNAME="{{ key "mail/vikunja/username" }}"
+VIKUNJA_MAILER_PASSWORD="{{ key "mail/vikunja/password" }}"
+EOH
+
+        destination = "secrets/file.env"
+	env = true
       }
 
       service {
@@ -96,16 +106,21 @@ job "vikunja" {
     task "vikunja-db" {
       driver = "docker"
 
-      env {
-	MYSQL_ROOT_PASSWORD = "supersupersecret"
-        MYSQL_USER = "vikunja"
-        MYSQL_PASSWORD = "supersecret"
-        MYSQL_DATABASE = "vikunja"
-      }
-
       config {
         image = "mariadb:10"
         ports = ["db"]
+      }
+
+      template {
+        data = <<EOH
+MYSQL_ROOT_PASSWORD="{{ key "vikunja/db/rootpassword" }}"
+MYSQL_USER="{{ key "vikunja/db/username" }}"
+MYSQL_PASSWORD="{{ key "vikunja/db/password" }}"
+MYSQL_DATABASE="{{ key "vikunja/db/database" }}"
+EOH
+
+        destination = "secrets/file.env"
+	env = true
       }
     }
   }
