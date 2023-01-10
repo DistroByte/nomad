@@ -28,7 +28,7 @@ databasebak=/backups/vikunja/db/vikunja-$timestamp.sql
 #
 #tar -zcf $attachmentsbak $attachments
 container=$(docker ps -aqf "name=^vikunja-db-*")
-docker exec $container mysqldump -u vikunja -p"supersecret" vikunja > ${databasebak}
+docker exec $container mysqldump -u vikunja -p"$(consul kv get vikunja/db/password)" vikunja > ${databasebak}
 
 find /backups/vikunja/db/vikunja-* -ctime +14 -exec rm {} \;
 
