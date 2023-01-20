@@ -40,9 +40,13 @@ VIKUNJA_DATABASE_USER="{{ key "vikunja/db/username" }}"
 VIKUNJA_DATABASE_DATABASE="{{ key "vikunja/db/database" }}"
 VIKUNJA_SERVICE_JWTSECRET="{{ key "vikunja/jwtsecret" }}"
 VIKUNJA_SERVICE_FRONTENDURL="https://todo.dbyte.xyz/"
+VIKUNJA_SERVICE_ENABLEEMAILREMINDERS=1
 VIKUNJA_MAILER_ENABLED="true"
-VIKUNJA_MAILER_HOST="{{ key "mail/distrobyte/host" }}"
-VIKUNJA_MAILER_PORT="{{ key "mail/distrobyte/port" }}"
+VIKUNJA_MAILER_FORCESSL=false
+VIKUNJA_MAILER_AUTHTYPE=plain
+VIKUNJA_MAILER_FROMEMAIL="vikunja@distrobyte.io"
+VIKUNJA_MAILER_HOST="{{ key "mail/google/host" }}"
+VIKUNJA_MAILER_PORT="{{ key "mail/google/port" }}"
 VIKUNJA_MAILER_USERNAME="{{ key "mail/vikunja/username" }}"
 VIKUNJA_MAILER_PASSWORD="{{ key "mail/vikunja/password" }}"
 EOH
