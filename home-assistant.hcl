@@ -21,6 +21,11 @@ job "home-assistant" {
         privileged = true
       }
 
+      resources {
+        cpu = 800
+        memory = 800
+      }
+
       service {
         port = "http"
 	name = "hass"
