@@ -2,7 +2,7 @@ job "paperless" {
   datacenters = ["dc1"]
   type = "service"
   
-  group "web" {
+  group "paperless-web" {
     network {
       port "http" {
 	static = 8067
