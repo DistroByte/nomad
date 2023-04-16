@@ -14,7 +14,7 @@ job "ddclient" {
 	  type = "bind"
 	  target = "/config"
 	  source = "/data/ddclient"
-	  readonly = true
+	  readonly = false
 	}
       }
     }

@@ -43,6 +43,11 @@ job "overseerr" {
           readonly = false
 	}
       }
+
+      resources {
+        cpu = 200
+        memory = 600
+      }
     }
   }
 }

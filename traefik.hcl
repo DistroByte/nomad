@@ -100,6 +100,16 @@ EOF
 
 [[http.services.synodrive.loadBalancer.servers]]
   url = "http://192.168.1.5:5002/"
+
+[http.routers.plausible]
+  rule = "Host(`plausible.dbyte.xyz`)"
+  entryPoints = ["websecure"]
+  service = "plausible"
+  [http.routers.plausible.tls]
+    certResolver = "lets-encrypt"
+
+[[http.services.plausible.loadBalancer.servers]]
+  url = "http://192.168.1.3:8000/"
 EOH
         destination = "local/traefik_dynamic.toml"
       }
