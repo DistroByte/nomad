@@ -1,4 +1,4 @@
-job "fileshare" {
+job "mediashare" {
   datacenters = ["dc1"]
   type = "service"
   
@@ -10,7 +10,7 @@ job "fileshare" {
     }
 
     service {
-      name = "fileshare"
+      name = "mediashare"
       port = "http"
 
       check {
@@ -22,22 +22,22 @@ job "fileshare" {
 
       tags = [
         "traefik.enable=true",
-	"traefik.http.routers.fileshare.rule=Host(`share.dbyte.xyz`)",
-	"traefik.http.routers.fileshare.entrypoints=websecure",
-	"traefik.http.routers.fileshare.tls=true",
+	"traefik.http.routers.mediashare.rule=Host(`share.dbyte.xyz`)",
+	"traefik.http.routers.mediashare.entrypoints=websecure",
+	"traefik.http.routers.mediashare.tls=true",
 	"traefik.port=${NOMAD_PORT_http}",
-	"traefik.http.routers.fileshare.tls.certresolver=lets-encrypt",
+	"traefik.http.routers.mediashare.tls.certresolver=lets-encrypt",
 	"traefik.frontend.passHostHeader=true",
-	"traefik.http.routers.fileshare.middlewares=auth",
+	"traefik.http.routers.mediashare.middlewares=auth",
 	"traefik.http.middlewares.auth.basicauth.users=share:$apr1$0QNuLBe0$.Emmh/KSVYHXJtLPtj2CW.",
       ]
     }
 
-    task "fileshare" {
+    task "mediashare" {
       driver = "docker"
 
       config {
-        image = "mohamnag/nginx-file-browser:latest"
+        image = "ghcr.io/distrobyte/nginx-file-browser:share"
 	ports = ["http"]
 
 	mount {

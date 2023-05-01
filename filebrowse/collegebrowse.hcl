@@ -37,7 +37,7 @@ job "collegeshare" {
       driver = "docker"
 
       config {
-        image = "mohamnag/nginx-file-browser:latest"
+        image = "ghcr.io/distrobyte/nginx-file-browser:college"
 	ports = ["http"]
 
 	mount {
