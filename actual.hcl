@@ -35,12 +35,17 @@ job "actual" {
       driver = "docker"
 
       config {
-	image = "jlongster/actual-server"
+	image = "actualbudget/actual-server"
 	ports = ["http"]
-	#volumes = [
-	#  "/data/actual/server:/app/server-files",
-        #  "/data/actual/user:/app/user-files"
-	#]
+      }
+
+      template {
+	data =<<EOH
+ACTUAL_NORDIGEN_SECRET_ID={{ key "actual/key-id" }}
+ACTUAL_NORDIGEN_SECRET_KEY={{ key "actual/key-secret" }}
+EOH
+	destination = "local/file.env"
+	env = true
       }
     }
   }
