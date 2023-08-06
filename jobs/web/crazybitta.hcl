@@ -42,6 +42,10 @@ job "crazybittabiz" {
           readonly = true
 	}
       }
+
+      resources {
+        memory = 50
+      }
     }
   }
 }

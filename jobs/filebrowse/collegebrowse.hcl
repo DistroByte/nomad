@@ -47,6 +47,10 @@ job "collegeshare" {
           readonly = false
 	}
       }
+
+      resources {
+        memory = 50
+      }
     }
   }
 }

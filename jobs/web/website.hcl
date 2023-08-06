@@ -42,6 +42,10 @@ job "website" {
           readonly = true
 	}
       }
+
+      resources {
+	memory = 50
+      }
     }
   }
 }

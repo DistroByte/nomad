@@ -28,7 +28,7 @@ job "blog" {
       ]
     }
 
-    task "nginx" {
+    task "blog" {
       driver = "docker"
 
       config {
@@ -39,6 +39,10 @@ job "blog" {
 	  "/backups/blog/default.conf:/etc/nginx/conf.d/default.conf",
 	  "/data/blog/_site:/usr/share/nginx/html"
 	]
+      }
+
+      resources {
+        memory = 50
       }
     }
   }

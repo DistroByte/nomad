@@ -17,6 +17,10 @@ job "ddclient" {
 	  readonly = false
 	}
       }
+
+      resources {
+        memory = 50
+      }
     }
   }
 }

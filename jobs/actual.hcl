@@ -35,7 +35,7 @@ job "actual" {
       driver = "docker"
 
       config {
-	image = "actualbudget/actual-server"
+	image = "actualbudget/actual-server:23.7.2"
 	ports = ["http"]
       }
 
@@ -46,6 +46,11 @@ ACTUAL_NORDIGEN_SECRET_KEY={{ key "actual/key-secret" }}
 EOH
 	destination = "local/file.env"
 	env = true
+      }
+
+      resources {
+	cpu = 100
+	memory = 200
       }
     }
   }
