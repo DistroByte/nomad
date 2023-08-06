@@ -80,6 +80,11 @@ EOH
         destination = "/local/pg_ident.conf"
       }
 
+      resources {
+        cpu = 400
+        memory = 800
+      }
+
       service {
         name = "postgresql"
         port = "db"
