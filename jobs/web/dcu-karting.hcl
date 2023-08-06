@@ -35,6 +35,10 @@ job "dcu-karting" {
         image = "ghcr.io/redbrick/karting"
 	ports = ["http"]
       }
+
+      resources {
+        memory = 50
+      }
     }
   }
 }

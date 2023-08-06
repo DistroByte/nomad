@@ -37,6 +37,11 @@ job "glances" {
 	GLANCES_OPT = "-C /glances/conf/glances.conf -w"
       }
 
+      resources {
+        cpu = 20
+	memory = 100
+      }
+
       template {
 	data = <<EOH
 ##############################################################################

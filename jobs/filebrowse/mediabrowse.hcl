@@ -54,6 +54,10 @@ job "mediashare" {
           readonly = false
 	}
       }
+
+      resources {
+        memory = 50
+      }
     }
   }
 }
