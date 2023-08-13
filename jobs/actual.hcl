@@ -10,6 +10,15 @@ job "actual" {
       }
     }
 
+    update {
+      max_parallel = 1
+      canary = 1
+      auto_promote = false
+      auto_revert = true
+      min_healthy_time = "30s"
+      healthy_deadline = "2m"
+    }
+
     service {
       name = "actual"
       port = "http"
@@ -25,7 +34,7 @@ job "actual" {
         "traefik.enable=true",
         "traefik.port=${NOMAD_PORT_http}",
         "traefik.docker.network=traefik_web",
-        "traefik.http.routers.actual.rule=Host(`actual.dbyte.xyz`)",
+        "traefik.http.routers.actual.rule=Host(`actual.dbyte.xyz`, `${NOMAD_SHORT_ALLOC_ID}.dbyte.xyz`)",
         "traefik.http.routers.actual.tls=true",
         "traefik.http.routers.actual.tls.certresolver=lets-encrypt",
       ]
@@ -34,23 +43,15 @@ job "actual" {
     task "actual" {
       driver = "docker"
 
-      config {
-	image = "actualbudget/actual-server:23.7.2"
-	ports = ["http"]
-      }
 
-      template {
-	data =<<EOH
-ACTUAL_NORDIGEN_SECRET_ID={{ key "actual/key-id" }}
-ACTUAL_NORDIGEN_SECRET_KEY={{ key "actual/key-secret" }}
-EOH
-	destination = "local/file.env"
-	env = true
+      config {
+	image = "actualbudget/actual-server:23.8.1"
+	ports = ["http"]
       }
 
       resources {
 	cpu = 100
-	memory = 200
+	memory = 400
       }
     }
   }
