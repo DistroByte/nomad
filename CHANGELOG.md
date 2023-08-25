@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.8] - 2023-08-25
+### Changed
+- Name of various backup tasks to reflect their target service
+- Method of selecting an alloc to backup from `docker exec` to `nomad alloc
+exec`
+
+### Added
+- ihatenixos.org web job
+- Gitea job for self hosted git
+
 ## [0.0.7] - 2023-08-14
 ### Added
 - Canary process for actual

@@ -49,6 +49,7 @@ VIKUNJA_MAILER_HOST="{{ key "mail/google/host" }}"
 VIKUNJA_MAILER_PORT="{{ key "mail/google/port" }}"
 VIKUNJA_MAILER_USERNAME="{{ key "mail/vikunja/username" }}"
 VIKUNJA_MAILER_PASSWORD="{{ key "mail/vikunja/password" }}"
+VIKUNJA_METRICS_ENABLED=true
 EOH
 
         destination = "secrets/file.env"

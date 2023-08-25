@@ -8,7 +8,7 @@ job "hedgedoc-backup" {
   }
 
   group "db-backup" {  
-    task "postgres-backup" {
+    task "hedgedoc-backup" {
       driver = "raw_exec"
 
       config {
@@ -22,15 +22,18 @@ job "hedgedoc-backup" {
 
 file=/backups/hedgedoc/hedgedoc-$(date +%Y-%m-%d_%H-%M-%S).sql
 
-docker exec $(docker ps -aqf "name=^hedgedoc-db-*") pg_dump hedgedoc -U hedgedoc > "${file}"
+alloc_id=$(nomad job allocs -t '{{ range . }}{{ if eq .ClientStatus "running" }}{{ print .ID }}{{ end }}{{ end }}' hedgedoc)
+
+nomad alloc exec --task hedgedoc-db $alloc_id pg_dump hedgedoc -U hedgedoc > ${file}
 
 find /backups/hedgedoc/hedgedoc* -ctime +14 -exec rm {} \;
 
 file_size=$(find $file -exec du -sh {} \; | cut -f1 | xargs | sed 's/$//')
 
-if test -f "$file"; then
+if [ -s "$file" ]; then
   exit 0
 else
+  rm $file
   curl -H "Content-Type: application/json" -d '{"content": "`HedgeDoc` backup has just **FAILED**\nFile name: `'"$file"'`\nDate: `'"$(TZ=Europe/Dublin date)"'`"}' {{ key "discord/log/webhook" }} 
 fi
 EOH

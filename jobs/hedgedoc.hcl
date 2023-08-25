@@ -56,7 +56,7 @@ job "hedgedoc" {
       }
 
       config {
-        image = "quay.io/hedgedoc/hedgedoc:1.9.4"
+        image = "quay.io/hedgedoc/hedgedoc:1.9.9"
 	ports = ["http"]
 
 	mount {

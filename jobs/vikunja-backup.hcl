@@ -8,7 +8,7 @@ job "vikunja-backup" {
   }
 
   group "db-backup" {  
-    task "postgres-backup" {
+    task "vikunja-backup" {
       driver = "raw_exec"
 
       config {
@@ -27,17 +27,22 @@ databasebak=/backups/vikunja/db/vikunja-$timestamp.sql
 #attachmentsbak=/etc/docker-compose/vikunja/backups/attach/vikunja-$timestamp.tar.gz
 #
 #tar -zcf $attachmentsbak $attachments
-container=$(docker ps -aqf "name=^vikunja-db-*")
-docker exec $container mysqldump -u vikunja -p"$(consul kv get vikunja/db/password)" vikunja > ${databasebak}
+
+allocation_id=$(nomad job allocs -t '{{ range . }}{{ if eq .ClientStatus "running" }}{{ print .ID }}{{ end }}{{ end }}' vikunja)
+
+echo $allocation_id
+
+nomad alloc exec --task vikunja-db $allocation_id mysqldump -u vikunja -p$(consul kv get vikunja/db/password) vikunja > ${databasebak}
 
 find /backups/vikunja/db/vikunja-* -ctime +14 -exec rm {} \;
 
 # when attachments come back
 #-a -f "$attachmentsbak"
-if [ -f "$databasebak" ]; then
+if [ -s "$databasebak" ]; then
   exit 0
 else
   curl -H "Content-Type: application/json" -d '{"content": "`Vikunja` backup has just **FAILED**\nFile name: `'"$databasebak"'`\nDate: `'"$(TZ=Europe/Dublin date)"'`"}' {{ key "discord/log/webhook" }}
+  rm $databasebak
 fi
 EOH
 
