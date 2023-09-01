@@ -30,8 +30,6 @@ databasebak=/backups/vikunja/db/vikunja-$timestamp.sql
 
 allocation_id=$(nomad job allocs -t '{{ range . }}{{ if eq .ClientStatus "running" }}{{ print .ID }}{{ end }}{{ end }}' vikunja)
 
-echo $allocation_id
-
 nomad alloc exec --task vikunja-db $allocation_id mysqldump -u vikunja -p$(consul kv get vikunja/db/password) vikunja > ${databasebak}
 
 find /backups/vikunja/db/vikunja-* -ctime +14 -exec rm {} \;
