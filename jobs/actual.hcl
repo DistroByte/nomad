@@ -45,8 +45,17 @@ job "actual" {
 
 
       config {
-	image = "actualbudget/actual-server:sha-09380db"
+	image = "actualbudget/actual-server:sha-6512c46"
 	ports = ["http"]
+      }
+
+      template {
+	data = <<EOF
+ACTUAL_UPLOAD_FILE_SIZE_LIMIT_MB=500
+DEBUG=debug:config
+EOF
+	destination = "local/env"
+	env = true
       }
 
       resources {
