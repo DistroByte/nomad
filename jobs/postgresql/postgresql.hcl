@@ -1,6 +1,11 @@
 job "postgres" {
   datacenters = ["dc1"]
 
+  constraint {
+    attribute = "${attr.cpu.arch}"
+    value     = "amd64"
+  }
+
   group "db" {
     network {
       port  "db"{
