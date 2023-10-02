@@ -55,6 +55,8 @@ GITEA__database__HOST = "postgresql.service.consul"
 GITEA__database__NAME = "giteadb"
 GITEA__database__USER = "{{ key "gitea/db/user" }}"
 GITEA__database__PASSWD = "{{ key "gitea/db/pass" }}"
+
+GITEA__metrics__ENABLED = "true"
 EOF
 	destination = "local/env"
 	env = true
