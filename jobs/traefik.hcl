@@ -38,23 +38,38 @@ job "traefik" {
 
       template {
         data = <<EOF
+accessLog = { }
+
+[api]
+  dashboard = true
+  insecure = true
+
 [entryPoints]
   [entryPoints.web]
   address = ":80"
   [entryPoints.web.http.redirections.entryPoint]
     to = "websecure"
     scheme = "https"
+    permanent = true
 
   [entryPoints.websecure]
   address = ":443"
+  [entryPoints.websecure.http.tls]
+    certresolver = "lets-encrypt"
+    [[entryPoints.websecure.http.tls.domains]]
+      main = "dbyte.xyz"
+      sans = ["*.dbyte.xyz"]
+
+    [[entryPoints.websecure.http.tls.domains]]
+      main = "james-hackett.ie"
+      sans = ["*.james-hackett.ie"]
+
+    [[entryPoints.websecure.http.tls.domains]]
+      main = "dbyte.xyz"
+      sans = ["*.dbyte.xyz"]
 
   [entryPoints.traefik]
   address = ":8081"
-
-[api]
-  dashboard = true
-  insecure  = true
-  debug = true
 
 [providers.consulCatalog]
   prefix = "traefik"
