@@ -13,10 +13,10 @@ job "actual" {
     update {
       max_parallel = 1
       canary = 1
-      auto_promote = false
+      auto_promote = true
       auto_revert = true
       min_healthy_time = "30s"
-      healthy_deadline = "2m"
+      healthy_deadline = "5m"
     }
 
     service {
@@ -45,7 +45,7 @@ job "actual" {
 
 
       config {
-	image = "actualbudget/actual-server:sha-6512c46"
+	image = "actualbudget/actual-server:23.10.0"
 	ports = ["http"]
       }
 
