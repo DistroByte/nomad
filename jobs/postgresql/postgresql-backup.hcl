@@ -41,21 +41,6 @@ EOH
 
       template {
         data = <<EOH
-# as service 'db-task' is registered in Consul
-# we wat to grab its 'alloc' tag
-{{- range $tag, $services := service "db-task" | byTag -}}
-{{if $tag | contains "alloc"}}
-{{$allocId := index ($tag | split "=") 1}}
-DB_ALLOC_ID="{{ $allocId }}"
-{{end}}
-{{end}}
-        EOH
-        destination = "secrets/file.env"
-        env         = true
-      }
-
-      template {
-        data = <<EOH
 #hostname:port:database:username:password
 *:*:*:root:rootpassword
 EOH
