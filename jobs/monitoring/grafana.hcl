@@ -3,6 +3,11 @@ job "grafana" {
 
   type = "service"
 
+  constraint {
+    attribute = "${attr.cpu.arch}"
+    value     = "amd64"
+  }
+
   group "web" {
     network {
       port "http" {
@@ -25,9 +30,9 @@ job "grafana" {
         "traefik.enable=true",
         "traefik.port=${NOMAD_PORT_http}",
         "traefik.docker.network=traefik_web",
-        "traefik.http.routers.actual.rule=Host(`grafana.dbyte.xyz`)",
-        "traefik.http.routers.actual.tls=true",
-        "traefik.http.routers.actual.tls.certresolver=lets-encrypt",
+        "traefik.http.routers.grafana.rule=Host(`grafana.dbyte.xyz`)",
+        "traefik.http.routers.grafana.tls=true",
+        "traefik.http.routers.grafana.tls.certresolver=lets-encrypt",
       ]
     }
 
@@ -38,16 +43,28 @@ job "grafana" {
 	GF_AUTH_BASIC_ENABLED = "false"
 	GF_INSTALL_PLUGINS = "grafana-piechart-panel"
 	GF_SERVER_ROOT_URL = "https://grafana.dbyte.xyz"
-#	GF_DATABASE_URL = "postgres://
       }
 
       config {
         image = "grafana/grafana"
 	ports = ["http"]
 
-#	volumes = [
-#	  "/data/grafana/:/var/lib/grafana"
-#	]
+	volumes = [
+	  "/data/grafana/:/var/lib/grafana"
+	]
+      }
+
+
+      template {
+	data =<<EOH
+GF_DATABASE_TYPE=postgres
+GF_DATABASE_HOST=postgresql.service.consul
+GF_DATABASE_NAME=grafana
+GF_DATABASE_USER={{ key "grafana/db/user" }}
+GF_DATABASE_PASSWORD={{ key "grafana/db/pass" }}
+EOH
+        destination = "local/file.env"
+        env = true
       }
     }
 
