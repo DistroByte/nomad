@@ -3,7 +3,7 @@ job "hedgedoc-backup" {
   type        = "batch"
 
   periodic {
-    cron             = "0 */3 * * * *"
+    crons            = ["0 */3 * * * *"]
     prohibit_overlap = true
   }
 
@@ -22,7 +22,7 @@ job "hedgedoc-backup" {
 
 file=/backups/hedgedoc/hedgedoc-$(date +%Y-%m-%d_%H-%M-%S).sql
 
-alloc_id=$(nomad job allocs -t '{{ range . }}{{ if eq .ClientStatus "running" }}{{ print .ID }}{{ end }}{{ end }}' hedgedoc)
+alloc_id=$(curl -s --request GET http://nomad.service.consul:4646/v1/job/hedgedoc/allocations | jq '.[0].ID' | tr -d '"')
 
 nomad alloc exec --task hedgedoc-db $alloc_id pg_dump hedgedoc -U hedgedoc > ${file}
 

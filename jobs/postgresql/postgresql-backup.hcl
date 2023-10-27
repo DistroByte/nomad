@@ -3,7 +3,7 @@ job "postgresql-backup" {
   type        = "batch"
 
   periodic {
-    cron             = "0 */3 * * * *"
+    crons            = ["0 */3 * * * *"]
     prohibit_overlap = true
   }
 
@@ -22,7 +22,9 @@ job "postgresql-backup" {
 
 file=/backups/postgresql/postgresql-$(date +%Y-%m-%d_%H-%M-%S).sql
 
-nomad alloc exec $(nomad job allocs -t '{{ range . }}{{ if eq .ClientStatus "running" }}{{ print .ID }}{{ end }}{{ end }}' postgres) pg_dumpall -U root > "${file}"
+alloc_id=$(curl -s --request GET http://nomad.service.consul:4646/v1/job/postgres/allocations | jq '.[0].ID' | tr -d '"')
+
+nomad alloc exec $alloc_id pg_dumpall -U root > "${file}"
 
 find /backups/postgresql/postgresql* -ctime +14 -exec rm {} \;
 

@@ -3,7 +3,7 @@ job "vikunja-backup" {
   type        = "batch"
 
   periodic {
-    cron             = "0 */3 * * * *"
+    crons            = ["0 */3 * * * *"]
     prohibit_overlap = true
   }
 
@@ -28,7 +28,7 @@ databasebak=/backups/vikunja/db/vikunja-$timestamp.sql
 #
 #tar -zcf $attachmentsbak $attachments
 
-allocation_id=$(nomad job allocs -t '{{ range . }}{{ if eq .ClientStatus "running" }}{{ print .ID }}{{ end }}{{ end }}' vikunja)
+allocation_id=$(curl -s --request GET http://nomad.service.consul:4646/v1/job/vikunja/allocations | jq '.[0].ID' | tr -d '"')
 
 nomad alloc exec --task vikunja-db $allocation_id mysqldump -u vikunja -p$(consul kv get vikunja/db/password) vikunja > ${databasebak}
 
