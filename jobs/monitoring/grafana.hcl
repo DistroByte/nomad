@@ -62,6 +62,7 @@ GF_DATABASE_HOST=postgresql.service.consul
 GF_DATABASE_NAME=grafana
 GF_DATABASE_USER={{ key "grafana/db/user" }}
 GF_DATABASE_PASSWORD={{ key "grafana/db/pass" }}
+GF_FEATURE_TOGGLES_ENABLE=publicDashboards
 EOH
         destination = "local/file.env"
         env = true

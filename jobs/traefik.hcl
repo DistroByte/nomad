@@ -44,6 +44,10 @@ accessLog = { }
   dashboard = true
   insecure = true
 
+[metrics]
+  prometheus = true
+  prometheus.entryPoint = web
+
 [entryPoints]
   [entryPoints.web]
   address = ":80"
