@@ -1,0 +1,55 @@
+---
+- name: Apt update and upgrade
+  hosts: all
+  gather_facts: false
+  serial: "{{ max_parallel }}"
+
+  vars:
+      update_hashicorp: false
+      check_hashicorp: false
+      upgrade: false
+      max_parallel: "{{ 1 if update_hashicorp | bool else '60%' }}"
+
+  tasks:
+      - name: Mark nomad and consul as held back
+        become: true
+        shell: "apt-mark hold nomad consul"
+        when: not update_hashicorp | bool and upgrade | bool
+
+      - name: Apt update and apt upgrade
+        become: true
+        apt:
+            upgrade: yes
+            autoclean: yes
+            autoremove: yes
+            update_cache: yes
+        when: upgrade | bool
+
+      - name: Get installed and updated packages
+        become: true
+        shell: 'grep -E "^$(date +%Y-%m-%d).+ (install|upgrade) " /var/log/dpkg.log | cut -d " " -f 3-5'
+        register: result
+        when: upgrade | bool
+
+      - name: Print result
+        debug:
+            msg: "{{ result.stdout_lines }}"
+        when: upgrade | bool
+
+      - name: Remove nomad and consul from hold
+        become: true
+        shell: "apt-mark unhold nomad consul"
+        when: not update_hashicorp | bool and upgrade | bool
+
+      - name: Check if nomad and consul can be updated
+        become: true
+        shell: "apt list --upgradable | grep -E 'nomad|consul'"
+        register: result
+        failed_when: false
+        changed_when: false
+        when: check_hashicorp | bool
+
+      - name: Print update result
+        debug:
+            msg: "{{ result.stdout_lines }}"
+        when: check_hashicorp | bool
