@@ -38,15 +38,9 @@ job "traefik" {
 
       template {
         data = <<EOF
-accessLog = { }
-
 [api]
   dashboard = true
   insecure = true
-
-[metrics]
-  prometheus = true
-  prometheus.entryPoint = web
 
 [entryPoints]
   [entryPoints.web]
@@ -54,26 +48,30 @@ accessLog = { }
   [entryPoints.web.http.redirections.entryPoint]
     to = "websecure"
     scheme = "https"
-    permanent = true
 
   [entryPoints.websecure]
-  address = ":443"
-  [entryPoints.websecure.http.tls]
-    certresolver = "lets-encrypt"
-    [[entryPoints.websecure.http.tls.domains]]
-      main = "dbyte.xyz"
-      sans = ["*.dbyte.xyz"]
+    address = ":443"
+  #[entryPoints.websecure.http.tls]
+  #  certresolver = "lets-encrypt"
+  #  [[entryPoints.websecure.http.tls.domains]]
+  #    main = "dbyte.xyz"
+  #    sans = ["*.dbyte.xyz"]
 
-    [[entryPoints.websecure.http.tls.domains]]
-      main = "james-hackett.ie"
-      sans = ["*.james-hackett.ie"]
+  #  [[entryPoints.websecure.http.tls.domains]]
+  #    main = "james-hackett.ie"
+  #    sans = ["*.james-hackett.ie"]
 
-    [[entryPoints.websecure.http.tls.domains]]
-      main = "dbyte.xyz"
-      sans = ["*.dbyte.xyz"]
+  #  [[entryPoints.websecure.http.tls.domains]]
+  #    main = "dbyte.xyz"
+  #    sans = ["*.dbyte.xyz"]
+
+  #  [[entryPoints.websecure.http.tls.domains]]
+  #    main = "prospector.ie"
+  #    sans = ["*.prospector.ie"]
+
 
   [entryPoints.traefik]
-  address = ":8081"
+    address = ":8081"
 
 [providers.consulCatalog]
   prefix = "traefik"

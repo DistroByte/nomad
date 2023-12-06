@@ -38,9 +38,15 @@ job "homarr" {
 
 	volumes = [
 	  "/data/homarr/configs:/app/data/configs",
+	  #"/data/homarr/data:/data",
 	  "/data/homarr/icons:/app/public/icons",
 	  "/data/homarr/img:/app/public/img"
 	]
+      }
+
+      resources {
+        cpu = 300
+        memory = 500
       }
     }
   }

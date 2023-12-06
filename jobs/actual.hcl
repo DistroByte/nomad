@@ -34,7 +34,7 @@ job "actual" {
         "traefik.enable=true",
         "traefik.port=${NOMAD_PORT_http}",
         "traefik.docker.network=traefik_web",
-        "traefik.http.routers.actual.rule=Host(`actual.dbyte.xyz`, `${NOMAD_SHORT_ALLOC_ID}.dbyte.xyz`)",
+        "traefik.http.routers.actual.rule=Host(`actual.dbyte.xyz`)",
         "traefik.http.routers.actual.tls=true",
         "traefik.http.routers.actual.tls.certresolver=lets-encrypt",
       ]
@@ -45,7 +45,7 @@ job "actual" {
 
 
       config {
-	image = "actualbudget/actual-server:23.10.0"
+	image = "actualbudget/actual-server:23.12.0"
 	ports = ["http"]
       }
 
