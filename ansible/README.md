@@ -11,6 +11,7 @@ This repository contains a collection of Ansible playbooks and roles that I use 
 | Variable            | Description                                | Default |
 | ------------------- | ------------------------------------------ | ------- |
 | `upgrade`           | upgrade packages                           | `false` |
+| `packages`          | install packages                           | `[]`    |
 | `check_hashicorp`   | check if hashicorp packages can be updated | `false` |
 | `upgrade_hashicorp` | upgrade hashicorp packages                 | `false` |
 
