@@ -7,7 +7,7 @@ job "vikunja-backup" {
     prohibit_overlap = true
   }
 
-  group "db-backup" {  
+  group "db-backup" {
     task "vikunja-backup" {
       driver = "raw_exec"
 

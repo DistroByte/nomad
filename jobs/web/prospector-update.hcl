@@ -7,7 +7,7 @@ job "prospector-update" {
     prohibit_overlap = true
   }
 
-  group "prospector-update" {  
+  group "prospector-update" {
     task "update-site" {
       driver = "raw_exec"
 
@@ -17,7 +17,7 @@ job "prospector-update" {
       }
 
       template {
-        data = <<EOH
+        data        = <<EOH
 #/bin/bash
 
 cd /data/prospector.ie

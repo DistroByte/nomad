@@ -7,7 +7,7 @@ job "website-update" {
     prohibit_overlap = true
   }
 
-  group "website-update" {  
+  group "website-update" {
     task "update-site" {
       driver = "raw_exec"
 
@@ -34,6 +34,7 @@ else
   echo "$(date) - update unsuccessful"
 fi
 EOH
+
         destination = "local/script.sh"
       }
     }

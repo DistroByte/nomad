@@ -1,11 +1,11 @@
 job "blog" {
   datacenters = ["dc1"]
-  type = "service"
-  
+  type        = "service"
+
   group "web" {
     network {
       port "http" {
-	to = 80
+        to = 80
       }
     }
 
@@ -14,17 +14,17 @@ job "blog" {
       port = "http"
 
       check {
-        type = "http"
-        path = "/"
+        type     = "http"
+        path     = "/"
         interval = "10s"
-        timeout = "2s"
+        timeout  = "2s"
       }
 
       tags = [
         "traefik.enable=true",
-	"traefik.http.routers.blog.rule=Host(`blog.dbyte.xyz`)",
-	"traefik.http.routers.blog.entrypoints=websecure",
-	"traefik.http.routers.blog.tls.certresolver=lets-encrypt"
+        "traefik.http.routers.blog.rule=Host(`blog.dbyte.xyz`)",
+        "traefik.http.routers.blog.entrypoints=websecure",
+        "traefik.http.routers.blog.tls.certresolver=lets-encrypt"
       ]
     }
 
@@ -33,12 +33,12 @@ job "blog" {
 
       config {
         image = "nginx"
-	ports = ["http"]
+        ports = ["http"]
 
-	volumes = [
-	  "/backups/blog/default.conf:/etc/nginx/conf.d/default.conf",
-	  "/data/blog/_site:/usr/share/nginx/html"
-	]
+        volumes = [
+          "/backups/blog/default.conf:/etc/nginx/conf.d/default.conf",
+          "/data/blog/_site:/usr/share/nginx/html"
+        ]
       }
 
       resources {

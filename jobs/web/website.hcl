@@ -1,11 +1,11 @@
 job "website" {
   datacenters = ["dc1"]
-  type = "service"
-  
+  type        = "service"
+
   group "web" {
     network {
       port "http" {
-	to = 80
+        to = 80
       }
     }
 
@@ -14,17 +14,17 @@ job "website" {
       port = "http"
 
       check {
-        type = "http"
-        path = "/"
+        type     = "http"
+        path     = "/"
         interval = "10s"
-        timeout = "2s"
+        timeout  = "2s"
       }
 
       tags = [
         "traefik.enable=true",
-	"traefik.http.routers.website.rule=Host(`james-hackett.ie`)",
-	"traefik.http.routers.website.entrypoints=websecure",
-	"traefik.http.routers.website.tls.certresolver=lets-encrypt"
+        "traefik.http.routers.website.rule=Host(`james-hackett.ie`)",
+        "traefik.http.routers.website.entrypoints=websecure",
+        "traefik.http.routers.website.tls.certresolver=lets-encrypt"
       ]
     }
 
@@ -33,18 +33,18 @@ job "website" {
 
       config {
         image = "nginx"
-	ports = ["http"]
+        ports = ["http"]
 
-	mount {
-	  type = "bind"
-          target = "/usr/share/nginx/html"
-          source = "/data/website/site"
+        mount {
+          type     = "bind"
+          target   = "/usr/share/nginx/html"
+          source   = "/data/website/site"
           readonly = true
-	}
+        }
       }
 
       resources {
-	memory = 50
+        memory = 50
       }
     }
   }

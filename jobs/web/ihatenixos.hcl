@@ -1,11 +1,11 @@
 job "ihatenixos" {
   datacenters = ["dc1"]
-  type = "service"
-  
+  type        = "service"
+
   group "web" {
     network {
       port "http" {
-	to = 80
+        to = 80
       }
     }
 
@@ -14,17 +14,17 @@ job "ihatenixos" {
       port = "http"
 
       check {
-        type = "http"
-        path = "/index.html"
+        type     = "http"
+        path     = "/index.html"
         interval = "10s"
-        timeout = "2s"
+        timeout  = "2s"
       }
 
       tags = [
         "traefik.enable=true",
-	"traefik.http.routers.ihatenixos.rule=Host(`ihatenixos.org`)",
-	"traefik.http.routers.ihatenixos.entrypoints=websecure",
-	"traefik.http.routers.ihatenixos.tls.certresolver=lets-encrypt"
+        "traefik.http.routers.ihatenixos.rule=Host(`ihatenixos.org`)",
+        "traefik.http.routers.ihatenixos.entrypoints=websecure",
+        "traefik.http.routers.ihatenixos.tls.certresolver=lets-encrypt"
       ]
     }
 
@@ -33,14 +33,14 @@ job "ihatenixos" {
 
       config {
         image = "nginx"
-	ports = ["http"]
+        ports = ["http"]
 
-	mount {
-	  type = "bind"
-          target = "/usr/share/nginx/html"
-          source = "/data/ihatenixos.org/site"
+        mount {
+          type     = "bind"
+          target   = "/usr/share/nginx/html"
+          source   = "/data/ihatenixos.org/site"
           readonly = true
-	}
+        }
       }
 
       resources {

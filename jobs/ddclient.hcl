@@ -10,12 +10,12 @@ job "ddclient" {
       config {
         image = "lscr.io/linuxserver/ddclient:latest"
 
-	mount {
-	  type = "bind"
-	  target = "/config"
-	  source = "/data/ddclient"
-	  readonly = false
-	}
+        mount {
+          type     = "bind"
+          target   = "/config"
+          source   = "/data/ddclient"
+          readonly = false
+        }
       }
 
       resources {

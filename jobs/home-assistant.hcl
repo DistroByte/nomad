@@ -8,17 +8,17 @@ job "home-assistant" {
   }
 
   group "home-automation" {
-    count = 1 
+    count = 1
     network {
-      port "http" { 
-	static = "8123" 
+      port "http" {
+        static = "8123"
       }
     }
 
     task "hass" {
       driver = "docker"
       config {
-        image = "homeassistant/home-assistant"
+        image        = "homeassistant/home-assistant"
         network_mode = "host"
         volumes = [
           "/data/home-assistant:/config",
@@ -27,15 +27,15 @@ job "home-assistant" {
       }
 
       resources {
-        cpu = 800
+        cpu    = 800
         memory = 800
       }
 
       service {
         port = "http"
-	name = "hass"
-        
-	tags = [
+        name = "hass"
+
+        tags = [
           "traefik.enable=true",
           "traefik.http.middlewares.httpsRedirect.redirectscheme.scheme=https",
           "traefik.http.routers.homeassistant.rule=Host(`ha.dbyte.xyz`)",

@@ -7,11 +7,11 @@ job "plex-update" {
     prohibit_overlap = true
   }
 
-  group "plex-update" {  
+  group "plex-update" {
 
     constraint {
       attribute = "${attr.unique.hostname}"
-      value = "zeus"
+      value     = "zeus"
     }
 
     task "update-plex" {
@@ -28,6 +28,7 @@ job "plex-update" {
 
 ssh -i /home/distro/.ssh/id_ed25519 root@dionysus.internal "/usr/local/bin/docker container restart plex"
 EOH
+
         destination = "local/script.sh"
       }
     }

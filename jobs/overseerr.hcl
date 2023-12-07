@@ -1,11 +1,11 @@
 job "overseerr" {
   datacenters = ["dc1"]
-  type = "service"
-  
+  type        = "service"
+
   group "web" {
     network {
       port "http" {
-	to = 5055
+        to = 5055
       }
     }
 
@@ -14,18 +14,18 @@ job "overseerr" {
       port = "http"
 
       check {
-        type = "http"
-        path = "/"
+        type     = "http"
+        path     = "/"
         interval = "10s"
-        timeout = "2s"
+        timeout  = "2s"
       }
 
       tags = [
         "traefik.enable=true",
-	"traefik.http.routers.overseerr.rule=Host(`request.dbyte.xyz`)",
-	"traefik.http.routers.overseerr.entrypoints=websecure",
-	"traefik.http.routers.overseerr.tls=true",
-	"traefik.http.routers.overseerr.tls.certresolver=lets-encrypt"
+        "traefik.http.routers.overseerr.rule=Host(`request.dbyte.xyz`)",
+        "traefik.http.routers.overseerr.entrypoints=websecure",
+        "traefik.http.routers.overseerr.tls=true",
+        "traefik.http.routers.overseerr.tls.certresolver=lets-encrypt"
       ]
     }
 
@@ -34,18 +34,18 @@ job "overseerr" {
 
       config {
         image = "sctx/overseerr:latest"
-	ports = ["http"]
+        ports = ["http"]
 
-	mount {
-	  type = "bind"
-          target = "/app/config"
-          source = "/data/overseerr"
+        mount {
+          type     = "bind"
+          target   = "/app/config"
+          source   = "/data/overseerr"
           readonly = false
-	}
+        }
       }
 
       resources {
-        cpu = 200
+        cpu    = 200
         memory = 600
       }
     }

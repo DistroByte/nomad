@@ -1,20 +1,20 @@
 job "gitea" {
   datacenters = ["dc1"]
-  type = "service"
+  type        = "service"
 
   constraint {
     attribute = "${attr.cpu.arch}"
     value     = "amd64"
   }
-  
+
   group "web" {
     network {
       port "http" {
-	to = 3000
+        to = 3000
       }
       port "ssh" {
-	static = 2222
-	to = 22
+        static = 2222
+        to     = 22
       }
     }
 
@@ -23,17 +23,17 @@ job "gitea" {
       port = "http"
 
       check {
-        type = "http"
-        path = "/"
+        type     = "http"
+        path     = "/"
         interval = "10s"
-        timeout = "2s"
+        timeout  = "2s"
       }
 
       tags = [
         "traefik.enable=true",
-	"traefik.http.routers.gitea.rule=Host(`git.dbyte.xyz`)",
-	"traefik.http.routers.gitea.entrypoints=websecure",
-	"traefik.http.routers.gitea.tls.certresolver=lets-encrypt"
+        "traefik.http.routers.gitea.rule=Host(`git.dbyte.xyz`)",
+        "traefik.http.routers.gitea.entrypoints=websecure",
+        "traefik.http.routers.gitea.tls.certresolver=lets-encrypt"
       ]
     }
 
@@ -42,17 +42,17 @@ job "gitea" {
 
       config {
         image = "gitea/gitea"
-	ports = ["http"]
+        ports = ["http"]
 
-	volumes = [
-	  "/data/gitea:/data",
-	  "/etc/timezone:/etc/timezone:ro",
-	  "/etc/localtime:/etc/localtime:ro"
-	]
+        volumes = [
+          "/data/gitea:/data",
+          "/etc/timezone:/etc/timezone:ro",
+          "/etc/localtime:/etc/localtime:ro"
+        ]
       }
 
       template {
-	data = <<EOF
+        data = <<EOF
 USER_UID = "1000"
 USER_GID = "1000"
 GITEA__database__DB_TYPE = "postgres"
@@ -63,13 +63,14 @@ GITEA__database__PASSWD = "{{ key "gitea/db/pass" }}"
 
 GITEA__metrics__ENABLED = "true"
 EOF
-	destination = "local/env"
-	env = true
+
+        destination = "local/env"
+        env         = true
       }
 
       resources {
-	cpu = 300
-	memory = 500
+        cpu    = 300
+        memory = 500
       }
     }
   }

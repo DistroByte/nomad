@@ -11,10 +11,10 @@ job "actual" {
     }
 
     update {
-      max_parallel = 1
-      canary = 1
-      auto_promote = true
-      auto_revert = true
+      max_parallel     = 1
+      canary           = 1
+      auto_promote     = true
+      auto_revert      = true
       min_healthy_time = "30s"
       healthy_deadline = "5m"
     }
@@ -24,10 +24,10 @@ job "actual" {
       port = "http"
 
       check {
-        type = "http"
-        path = "/"
+        type     = "http"
+        path     = "/"
         interval = "10s"
-        timeout = "2s"
+        timeout  = "2s"
       }
 
       tags = [
@@ -45,22 +45,23 @@ job "actual" {
 
 
       config {
-	image = "actualbudget/actual-server:23.12.0"
-	ports = ["http"]
+        image = "actualbudget/actual-server:23.12.0"
+        ports = ["http"]
       }
 
       template {
-	data = <<EOF
+        data = <<EOF
 ACTUAL_UPLOAD_FILE_SIZE_LIMIT_MB=500
 DEBUG=debug:config
 EOF
-	destination = "local/env"
-	env = true
+
+        destination = "local/env"
+        env         = true
       }
 
       resources {
-	cpu = 100
-	memory = 400
+        cpu    = 100
+        memory = 400
       }
     }
   }

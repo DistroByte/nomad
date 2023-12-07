@@ -1,13 +1,13 @@
 job "glances" {
   datacenters = ["dc1"]
-  type = "system"
-  
+  type        = "system"
+
   group "web" {
     network {
       mode = "host"
 
       port "http" {
-	static = "61208"
+        static = "61208"
       }
     }
 
@@ -15,7 +15,7 @@ job "glances" {
       name = "glances"
 
       tags = [
-	"traefik.port=61208",
+        "traefik.port=61208",
         "traefik.frontend.rule=Host:glances.docker.localhost"
       ]
     }
@@ -24,26 +24,26 @@ job "glances" {
       driver = "docker"
 
       config {
-        image = "nicolargo/glances:dev"
-	privileged = true
-        ports = ["http"]
-	pid_mode = "host"
-	volumes = [
-	  "local/glances.conf:/glances/conf/glances.conf"
-	]
+        image      = "nicolargo/glances:dev"
+        privileged = true
+        ports      = ["http"]
+        pid_mode   = "host"
+        volumes = [
+          "local/glances.conf:/glances/conf/glances.conf"
+        ]
       }
-      
+
       env {
-	GLANCES_OPT = "-C /glances/conf/glances.conf -w"
+        GLANCES_OPT = "-C /glances/conf/glances.conf -w"
       }
 
       resources {
-        cpu = 20
-	memory = 100
+        cpu    = 20
+        memory = 100
       }
 
       template {
-	data = <<EOH
+        data = <<EOH
 ##############################################################################
 # Globals Glances parameters
 ##############################################################################
@@ -713,7 +713,8 @@ refresh=30
 one_line=true
 service_cmd=/usr/bin/service --status-all
 EOH
-	destination = "local/glances.conf"
+
+        destination = "local/glances.conf"
       }
     }
   }

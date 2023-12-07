@@ -27,12 +27,12 @@ job "shlink" {
       driver = "docker"
 
       config {
-	image = "shlinkio/shlink"
-	ports = ["http"]
+        image = "shlinkio/shlink"
+        ports = ["http"]
       }
 
       template {
-	data = <<EOH
+        data = <<EOH
 DEFAULT_DOMAIN=s.dbyte.xyz
 IS_HTTPS_ENABLED=true
 DB_DRIVER=postgres
@@ -42,8 +42,9 @@ DB_NAME={{ key "shlink/db/name" }}
 DB_HOST=postgresql.service.consul
 GEOLITE_LICENSE_KEY={{ key "shlink/geolite/key" }}
 EOH
-	destination = "local/file.env"
-	env = true
+
+        destination = "local/file.env"
+        env         = true
       }
       resources {
         memory = 500 # 6gb

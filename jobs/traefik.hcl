@@ -8,13 +8,13 @@ job "traefik" {
   }
   group "traefik" {
     network {
-      port "http"{
+      port "http" {
         static = 80
       }
       port "https" {
         static = 443
       }
-      port "admin"{
+      port "admin" {
         static = 8081
       }
     }
@@ -27,12 +27,12 @@ job "traefik" {
     task "traefik" {
       driver = "docker"
       config {
-        image = "traefik:2.8"
+        image        = "traefik:2.8"
         network_mode = "host"
-        
+
         volumes = [
           "local/traefik.toml:/etc/traefik/traefik.toml",
-	  "local/traefik_dynamic.toml:/etc/traefik/traefik_dynamic.toml"
+          "local/traefik_dynamic.toml:/etc/traefik/traefik_dynamic.toml"
         ]
       }
 
@@ -93,11 +93,12 @@ job "traefik" {
 [providers.file]
   filename = "local/traefik_dynamic.toml"
 EOF
+
         destination = "local/traefik.toml"
       }
 
       template {
- 	data = <<EOH
+        data = <<EOH
 [http.routers.synophotos]
   rule = "Host(`photos.dbyte.xyz`)"
   entryPoints = ["websecure"]
@@ -128,6 +129,7 @@ EOF
 [[http.services.plausible.loadBalancer.servers]]
   url = "http://192.168.1.3:8000/"
 EOH
+
         destination = "local/traefik_dynamic.toml"
       }
     }

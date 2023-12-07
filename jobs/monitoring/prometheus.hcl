@@ -3,40 +3,39 @@ job "prometheus" {
 
   constraint {
     attribute = "${attr.cpu.arch}"
-    value   = "amd64"
+    value     = "amd64"
   }
 
   group "prometheus" {
     network {
       port "http" {
-      static = 9090
-    }
-  }
-
-  service {
-    name = "prometheus"
-    port = "http"
-  }
-
-  task "prometheus" {
-    driver = "docker"
-    config {
-      image = "quay.io/prometheus/prometheus"
-      ports = ["http"]
-
-      args = [
-        "--config.file=$${NOMAD_TASK_DIR}/prometheus.yml",
-        "--log.level=info",
-        "--storage.tsdb.retention.time=90d",
-        "--storage.tsdb.path=/prometheus",
-        "--web.console.libraries=/usr/share/prometheus/console_libraries",
-        "--web.console.templates=/usr/share/prometheus/consoles"
-      ]
+        static = 9090
+      }
     }
 
-    template {
-      destination = "local/prometheus.yml"
-      data = <<EOF
+    service {
+      name = "prometheus"
+      port = "http"
+    }
+
+    task "prometheus" {
+      driver = "docker"
+      config {
+        image = "quay.io/prometheus/prometheus"
+        ports = ["http"]
+
+        args = [
+          "--config.file=$${NOMAD_TASK_DIR}/prometheus.yml",
+          "--log.level=info",
+          "--storage.tsdb.retention.time=90d",
+          "--storage.tsdb.path=/prometheus",
+          "--web.console.libraries=/usr/share/prometheus/console_libraries",
+          "--web.console.templates=/usr/share/prometheus/consoles"
+        ]
+      }
+
+      template {
+        data = <<EOF
 global:
   scrape_interval: 10s
   evaluation_interval: 10s
@@ -75,6 +74,8 @@ scrape_configs:
   - source_labels: ['__meta_consul_service']
     target_label: 'service'
 EOF
+
+        destination = "local/prometheus.yml"
       }
     }
   }

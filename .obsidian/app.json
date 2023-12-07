@@ -1,0 +1,13 @@
+{
+  "strictLineBreaks": false,
+  "autoPairMarkdown": false,
+  "tabSize": 2,
+  "useMarkdownLinks": true,
+  "newLinkFormat": "relative",
+  "alwaysUpdateLinks": true,
+  "promptDelete": false,
+  "attachmentFolderPath": "docs/attachments",
+  "newFileLocation": "folder",
+  "newFileFolderPath": "docs",
+  "showUnsupportedFiles": true
+}

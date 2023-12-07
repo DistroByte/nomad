@@ -7,7 +7,7 @@ job "paperless-backup" {
     prohibit_overlap = true
   }
 
-  group "db-backup" {  
+  group "db-backup" {
     task "paperless-backup" {
       driver = "raw_exec"
 

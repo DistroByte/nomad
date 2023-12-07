@@ -8,34 +8,33 @@ job "postgres" {
 
   group "db" {
     network {
-      port  "db"{
+      port "db" {
         static = 5432
       }
     }
 
     task "postgresql-db" {
       driver = "docker"
-      
-      template {
-	data = <<EOH
 
-        POSTGRES_PASSWORD="{{ key "postgresql/password/root" }}"
-	POSTGRES_USER="root"
-	EOH
-	
-	destination = "local/file.env"
-	env = true
+      template {
+        data = <<EOH
+POSTGRES_PASSWORD="{{ key "postgresql/password/root" }}"
+POSTGRES_USER="root"
+EOH
+
+        destination = "local/file.env"
+        env         = true
       }
 
       config {
         image = "postgres:latest"
         ports = ["db"]
 
-	volumes = [
-	  "local/postgresql.conf:/etc/postgres/postgresql.conf",
-	  "local/pg_hba.conf:/pg_hba.conf",
-	  "local/pg_ident.conf:/pg_ident.conf"
-	]
+        volumes = [
+          "local/postgresql.conf:/etc/postgres/postgresql.conf",
+          "local/pg_hba.conf:/pg_hba.conf",
+          "local/pg_ident.conf:/pg_ident.conf"
+        ]
       }
 
       template {
@@ -75,18 +74,19 @@ host    replication     all             ::1/128                 trust
 host 	all 		all 		all 			scram-sha-256
 local 	homeassistant 	homeassistant 				peer
 EOH
+
         destination = "local/pg_hba.conf"
       }
 
       template {
-        data = <<EOH
+        data        = <<EOH
 map-name root homeassistant
 EOH
         destination = "/local/pg_ident.conf"
       }
 
       resources {
-        cpu = 400
+        cpu    = 400
         memory = 800
       }
 
@@ -94,7 +94,7 @@ EOH
         name = "postgresql"
         port = "db"
 
-	tags = ["alloc=${NOMAD_ALLOC_ID}"]
+        tags = ["alloc=${NOMAD_ALLOC_ID}"]
 
         check {
           type     = "tcp"

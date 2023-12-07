@@ -14,18 +14,18 @@ job "distro-vm" {
     task "distro-vm" {
       constraint {
         attribute = "${attr.unique.hostname}"
-        value = "wheatley"
+        value     = "wheatley"
       }
 
       resources {
-        cpu = 12000
+        cpu    = 12000
         memory = 4096
       }
 
       artifact {
-        source = "https://cloud.debian.org/images/cloud/bullseye/latest/debian-11-genericcloud-amd64.qcow2"
+        source      = "https://cloud.debian.org/images/cloud/bullseye/latest/debian-11-genericcloud-amd64.qcow2"
         destination = "local/distro-vm.qcow2"
-        mode = "file"
+        mode        = "file"
       }
 
       driver = "qemu"

@@ -1,11 +1,11 @@
 job "crazybittabiz" {
   datacenters = ["dc1"]
-  type = "service"
-  
+  type        = "service"
+
   group "web" {
     network {
       port "http" {
-	to = 80
+        to = 80
       }
     }
 
@@ -14,17 +14,17 @@ job "crazybittabiz" {
       port = "http"
 
       check {
-        type = "http"
-        path = "/index.html"
+        type     = "http"
+        path     = "/index.html"
         interval = "10s"
-        timeout = "2s"
+        timeout  = "2s"
       }
 
       tags = [
         "traefik.enable=true",
-	"traefik.http.routers.crazybittabiz.rule=Host(`crazybitta.biz`)",
-	"traefik.http.routers.crazybittabiz.entrypoints=websecure",
-	"traefik.http.routers.crazybittabiz.tls.certresolver=lets-encrypt"
+        "traefik.http.routers.crazybittabiz.rule=Host(`crazybitta.biz`)",
+        "traefik.http.routers.crazybittabiz.entrypoints=websecure",
+        "traefik.http.routers.crazybittabiz.tls.certresolver=lets-encrypt"
       ]
     }
 
@@ -33,14 +33,14 @@ job "crazybittabiz" {
 
       config {
         image = "nginx"
-	ports = ["http"]
+        ports = ["http"]
 
-	mount {
-	  type = "bind"
-          target = "/usr/share/nginx/html"
-          source = "/data/crazybittabiz/site"
+        mount {
+          type     = "bind"
+          target   = "/usr/share/nginx/html"
+          source   = "/data/crazybittabiz/site"
           readonly = true
-	}
+        }
       }
 
       resources {

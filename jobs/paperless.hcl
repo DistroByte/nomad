@@ -1,11 +1,11 @@
 job "paperless" {
   datacenters = ["dc1"]
-  type = "service"
-  
+  type        = "service"
+
   group "paperless-web" {
     network {
       port "http" {
-	static = 8067
+        static = 8067
       }
       port "redis" {
         to = 6379
@@ -17,20 +17,20 @@ job "paperless" {
       port = "http"
 
       check {
-        type = "http"
-        path = "/"
+        type     = "http"
+        path     = "/"
         interval = "10s"
-        timeout = "2s"
+        timeout  = "2s"
       }
 
       tags = [
         "traefik.enable=true",
-	"traefik.http.routers.paperless.rule=Host(`paperless.dbyte.xyz`)",
-	"traefik.http.routers.paperless.entrypoints=websecure",
-	"traefik.http.routers.paperless.tls=true",
-	"traefik.port=${NOMAD_PORT_http}",
-	"traefik.http.routers.paperless.tls.certresolver=lets-encrypt",
-	"traefik.http.middlewares.paperless.headers.contentSecurityPolicy=default-src 'self'; img-src 'self' data:"
+        "traefik.http.routers.paperless.rule=Host(`paperless.dbyte.xyz`)",
+        "traefik.http.routers.paperless.entrypoints=websecure",
+        "traefik.http.routers.paperless.tls=true",
+        "traefik.port=${NOMAD_PORT_http}",
+        "traefik.http.routers.paperless.tls.certresolver=lets-encrypt",
+        "traefik.http.middlewares.paperless.headers.contentSecurityPolicy=default-src 'self'; img-src 'self' data:"
       ]
     }
 
@@ -38,26 +38,26 @@ job "paperless" {
       driver = "docker"
 
       env {
-        PAPERLESS_REDIS = "redis://${NOMAD_ADDR_redis}"
-	PAPERLESS_DBHOST = "postgresql.service.consul"
-        PAPERLESS_PORT = "${NOMAD_PORT_http}"
+        PAPERLESS_REDIS  = "redis://${NOMAD_ADDR_redis}"
+        PAPERLESS_DBHOST = "postgresql.service.consul"
+        PAPERLESS_PORT   = "${NOMAD_PORT_http}"
       }
 
       config {
         image = "ghcr.io/paperless-ngx/paperless-ngx:latest"
-	ports = ["http"]
+        ports = ["http"]
 
-	volumes = [
-	  "/data/paperless/consume:/usr/src/paperless/consume",
+        volumes = [
+          "/data/paperless/consume:/usr/src/paperless/consume",
           "/data/paperless/data:/usr/src/paperless/data",
           "/data/paperless/media:/usr/src/paperless/media",
           "/data/paperless/export:/usr/src/paperless/export",
           "/data/paperless/preconsume:/usr/src/paperless/preconsume",
-	]
+        ]
       }
 
       template {
-	data =<<EOH
+        data = <<EOH
 PAPERLESS_DBPASS={{ key "paperless/db/pass" }}
 PAPERLESS_DBUSER={{ key "paperless/db/user" }}
 PAPERLESS_SECRETKEY={{ key "paperless/env/secret" }}
@@ -68,13 +68,14 @@ PAPERLESS_PRE_CONSUME_SCRIPT={{ key "paperless/env/preconsume-script" }}
 PAPERLESS_ALLOWED_HOSTS="localhost,192.168.1.4,192.168.1.3,paperless.dbyte.xyz"
 PAPERLESS_CONSUMER_POLLING=1
 EOH
+
         destination = "local/file.env"
-        env = true
+        env         = true
       }
 
       resources {
-        cpu = 800
-	memory = 1000
+        cpu    = 800
+        memory = 1000
       }
     }
 
@@ -82,9 +83,9 @@ EOH
       driver = "docker"
 
       config {
-	image = "docker.io/library/redis:7"
-	ports = ["redis"]
+        image = "docker.io/library/redis:7"
+        ports = ["redis"]
       }
-    }  
+    }
   }
 }

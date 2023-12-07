@@ -1,11 +1,11 @@
 job "pinting" {
   datacenters = ["dc1"]
-  type = "service"
-  
+  type        = "service"
+
   group "web" {
     network {
       port "http" {
-	to = 80
+        to = 80
       }
     }
 
@@ -14,17 +14,17 @@ job "pinting" {
       port = "http"
 
       check {
-        type = "http"
-        path = "/index.html"
+        type     = "http"
+        path     = "/index.html"
         interval = "10s"
-        timeout = "2s"
+        timeout  = "2s"
       }
 
       tags = [
         "traefik.enable=true",
-	"traefik.http.routers.pinting.rule=Host(`pint.ing`)",
-	"traefik.http.routers.pinting.entrypoints=websecure",
-	"traefik.http.routers.pinting.tls.certresolver=lets-encrypt"
+        "traefik.http.routers.pinting.rule=Host(`pint.ing`)",
+        "traefik.http.routers.pinting.entrypoints=websecure",
+        "traefik.http.routers.pinting.tls.certresolver=lets-encrypt"
       ]
     }
 
@@ -33,14 +33,14 @@ job "pinting" {
 
       config {
         image = "nginx"
-	ports = ["http"]
+        ports = ["http"]
 
-	mount {
-	  type = "bind"
-          target = "/usr/share/nginx/html"
-          source = "/data/pinting/site"
+        mount {
+          type     = "bind"
+          target   = "/usr/share/nginx/html"
+          source   = "/data/pinting/site"
           readonly = true
-	}
+        }
       }
 
       resources {

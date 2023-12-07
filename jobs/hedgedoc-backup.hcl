@@ -7,7 +7,7 @@ job "hedgedoc-backup" {
     prohibit_overlap = true
   }
 
-  group "db-backup" {  
+  group "db-backup" {
     task "hedgedoc-backup" {
       driver = "raw_exec"
 

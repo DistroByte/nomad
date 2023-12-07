@@ -11,7 +11,7 @@ job "grafana" {
   group "web" {
     network {
       port "http" {
-	to = 3000
+        to = 3000
       }
     }
 
@@ -20,10 +20,10 @@ job "grafana" {
       port = "http"
 
       check {
-	type = "http"
-	path = "/"
-	interval = "10s"
-	timeout = "2s"
+        type     = "http"
+        path     = "/"
+        interval = "10s"
+        timeout  = "2s"
       }
 
       tags = [
@@ -40,23 +40,23 @@ job "grafana" {
       driver = "docker"
 
       env {
-	GF_AUTH_BASIC_ENABLED = "false"
-	GF_INSTALL_PLUGINS = "grafana-piechart-panel"
-	GF_SERVER_ROOT_URL = "https://grafana.dbyte.xyz"
+        GF_AUTH_BASIC_ENABLED = "false"
+        GF_INSTALL_PLUGINS    = "grafana-piechart-panel"
+        GF_SERVER_ROOT_URL    = "https://grafana.dbyte.xyz"
       }
 
       config {
         image = "grafana/grafana"
-	ports = ["http"]
+        ports = ["http"]
 
-	volumes = [
-	  "/data/grafana/:/var/lib/grafana"
-	]
+        volumes = [
+          "/data/grafana/:/var/lib/grafana"
+        ]
       }
 
 
       template {
-	data =<<EOH
+        data = <<EOH
 GF_DATABASE_TYPE=postgres
 GF_DATABASE_HOST=postgresql.service.consul
 GF_DATABASE_NAME=grafana
@@ -64,8 +64,9 @@ GF_DATABASE_USER={{ key "grafana/db/user" }}
 GF_DATABASE_PASSWORD={{ key "grafana/db/pass" }}
 GF_FEATURE_TOGGLES_ENABLE=publicDashboards
 EOH
+
         destination = "local/file.env"
-        env = true
+        env         = true
       }
     }
 

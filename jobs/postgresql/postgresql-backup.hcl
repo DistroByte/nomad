@@ -7,7 +7,7 @@ job "postgresql-backup" {
     prohibit_overlap = true
   }
 
-  group "db-backup" {  
+  group "db-backup" {
     task "postgres-backup" {
       driver = "raw_exec"
 
@@ -46,8 +46,9 @@ EOH
 #hostname:port:database:username:password
 *:*:*:root:rootpassword
 EOH
-         destination = "local/.pgpass"
-       }
+
+        destination = "local/.pgpass"
+      }
     }
   }
 }
