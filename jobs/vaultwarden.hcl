@@ -1,12 +1,18 @@
 job "vaultwarden" {
   datacenters = ["dc1"]
   type        = "service"
+
   group "vaultwarden" {
     count = 1
+
+    network {
+      port "http" {}
+    }
 
     service {
       name = "vaultwarden"
       port = "http"
+
       tags = [
         "traefik.enable=true",
         "traefik.http.routers.vaultwarden.rule=Host(`vault.dbyte.xyz`)",
