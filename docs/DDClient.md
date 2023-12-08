@@ -1,6 +1,6 @@
 ---
 tags:
-  - service
+  - services
 ---
 # Ddclient
 
