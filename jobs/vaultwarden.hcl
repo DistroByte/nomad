@@ -6,7 +6,9 @@ job "vaultwarden" {
     count = 1
 
     network {
-      port "http" {}
+      port "http" {
+        to = 80
+      }
     }
 
     service {
