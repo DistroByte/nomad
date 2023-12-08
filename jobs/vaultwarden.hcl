@@ -2,6 +2,11 @@ job "vaultwarden" {
   datacenters = ["dc1"]
   type        = "service"
 
+  constraint {
+    attribute = "${attr.cpu.arch}"
+    value     = "amd64"
+  }
+
   group "vaultwarden" {
     count = 1
 
@@ -20,9 +25,6 @@ job "vaultwarden" {
         "traefik.http.routers.vaultwarden.rule=Host(`vault.dbyte.xyz`)",
         "traefik.http.routers.vaultwarden.entrypoints=websecure",
         "traefik.http.routers.vaultwarden.tls.certresolver=lets-encrypt",
-        "traefik.http.middlewares.redirect-https.redirectScheme.scheme=https",
-        "traefik.http.middlewares.redirect-https.redirectScheme.permanent=true",
-        "traefik.http.routers.vaultwarden.middlewares=redirect-https"
       ]
     }
 
