@@ -33,6 +33,7 @@ job "vaultwarden" {
 
       config {
         image = "vaultwarden/server:latest"
+        ports = ["http"]
 
         volumes = [
           "/data/vaultwarden/data:/data"
