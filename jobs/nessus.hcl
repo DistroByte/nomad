@@ -23,14 +23,8 @@ job "nessus" {
         path     = "/"
         interval = "10s"
         timeout  = "2s"
+	protocol = "https"
       }
-
-      tags = [
-        "traefik.enable=true",
-        "traefik.http.routers.nessus.rule=Host(`nessus.services.consul`)",
-        "traefik.http.routers.nessus.entrypoints=websecure",
-        "traefik.http.routers.nessus.tls.certresolver=lets-encrypt"
-      ]
     }
 
     task "nessus" {
