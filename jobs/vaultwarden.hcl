@@ -19,7 +19,10 @@ job "vaultwarden" {
         "traefik.enable=true",
         "traefik.http.routers.vaultwarden.rule=Host(`vault.dbyte.xyz`)",
         "traefik.http.routers.vaultwarden.entrypoints=websecure",
-        "traefik.http.routers.vaultwarden.tls.certresolver=lets-encrypt"
+        "traefik.http.routers.vaultwarden.tls.certresolver=lets-encrypt",
+        "traefik.http.middlewares.redirect-https.redirectScheme.scheme=https",
+        "traefik.http.middlewares.redirect-https.redirectScheme.permanent=true",
+        "traefik.http.routers.vaultwarden.middlewares=redirect-https"
       ]
     }
 
