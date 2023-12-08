@@ -15,7 +15,3 @@ The data stored in Vaultwarden is stored on my NFS share on [Synology DS920+](Sy
 ## Security Concerns
 
 Fail2ban is used to prevent brute forcing passwords. See [this guide](https://github.com/dani-garcia/vaultwarden/wiki/Fail2Ban-Setup) for more.
-
-## Quirks
-
-[[Traefik]] must proxy requests to `https`, not `http` like it does by default.
