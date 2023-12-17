@@ -1,6 +1,13 @@
+---
+title: Flexoki
+---
+
 author:: Steph Ango
+
 source:: [Flexoki](https://stephango.com/flexoki)
+
 clipped:: [[2023-12-06]]
+
 published:: 
 
 #resources #to_read
@@ -111,15 +118,11 @@ Dark theme
 
 `base-950`
 
- 
-
 `bg-2`
 
 `#282726`
 
 `base-900`
-
- 
 
 `ui`
 
@@ -127,23 +130,17 @@ Dark theme
 
 `base-850`
 
- 
-
 `ui-2`
 
 `#403E3C`
 
 `base-800`
 
- 
-
 `ui-3`
 
 `#575653`
 
 `base-700`
-
- 
 
 `tx-3`
 
@@ -153,13 +150,9 @@ Dark theme
 
 `tx-2`
 
- 
-
 `#878580`
 
 `base-500`
-
- 
 
 `tx-2`
 
@@ -168,8 +161,6 @@ Dark theme
 `base-300`
 
 `tx-3`
-
- 
 
 `#CECDC3`
 
@@ -185,15 +176,11 @@ Dark theme
 
 `ui-2`
 
- 
-
 `#E6E4D9`
 
 `base-100`
 
 `ui`
-
- 
 
 `#F2F0E5`
 
@@ -201,15 +188,11 @@ Dark theme
 
 `bg-2`
 
- 
-
 `#FFFCF0`
 
 `paper`
 
 `bg`
-
- 
 
 ## Accent colors
 
@@ -381,31 +364,21 @@ Syntax highlighting
 
 Main background
 
- 
-
 `bg-2`
 
 Secondary background
-
- 
 
 `ui`
 
 Borders
 
- 
-
 `ui-2`
 
 Hovered borders
 
- 
-
 `ui-3`
 
 Active borders
-
- 
 
 `tx-3`
 
@@ -423,8 +396,6 @@ Punctuation, operators
 
 Primary text
 
- 
-
 `re`
 
 Error text
@@ -438,8 +409,6 @@ Warning text
 Functions
 
 `ye`
-
- 
 
 Constants
 
@@ -457,27 +426,19 @@ Strings
 
 `bl`
 
- 
-
 Variables, attributes
 
 `pu`
 
- 
-
 Numbers
 
 `ma`
-
- 
 
 Language features
 
 ## Changelog
 
 Date
-
- 
 
 **2023-10-07**
 

@@ -1,6 +1,13 @@
+---
+title: Clipping Articles into Obsidian - Obsidian Rocks
+---
+
 author:: Tim Miller
+
 source:: [Clipping Articles into Obsidian - Obsidian Rocks](https://obsidian.rocks/clipping-articles-into-obsidian/)
+
 clipped:: [[2023-12-06]]
+
 published:: 
 
 #resources #to_read

@@ -1,6 +1,13 @@
+---
+title: Vim file navigation
+---
+
 author:: PetePete
+
 source:: [Vim file navigation](https://stackoverflow.com/questions/1445992/vim-file-navigation)
+
 clipped:: [[2023-12-06]]
+
 published:: 
 
 #resources #to_read
