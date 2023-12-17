@@ -9,5 +9,7 @@
   "attachmentFolderPath": "docs/attachments",
   "newFileLocation": "folder",
   "newFileFolderPath": "docs",
-  "showUnsupportedFiles": true
+  "showUnsupportedFiles": true,
+  "propertiesInDocument": "visible",
+  "showInlineTitle": true
 }
