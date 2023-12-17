@@ -8,22 +8,8 @@
       "key": "Tab"
     }
   ],
-  "workspace:previous-tab": [
-    {
-      "modifiers": [
-        "Ctrl"
-      ],
-      "key": "PageUp"
-    }
-  ],
-  "workspace:next-tab": [
-    {
-      "modifiers": [
-        "Ctrl"
-      ],
-      "key": "PageDown"
-    }
-  ],
+  "workspace:previous-tab": [],
+  "workspace:next-tab": [],
   "cycle-through-panes:focus-on-last-active-pane-reverse": [
     {
       "modifiers": [
@@ -43,7 +29,8 @@
   "app:toggle-right-sidebar": [
     {
       "modifiers": [
-        "Shift"
+        "Alt",
+        "Mod"
       ],
       "key": " "
     }
