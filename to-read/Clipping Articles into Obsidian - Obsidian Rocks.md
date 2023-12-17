@@ -8,6 +8,8 @@ author: Tim Miller
 source: https://obsidian.rocks/clipping-articles-into-obsidian/
 ---
 
+See also: [5 different methods](https://obsidian.rocks/save-articles-to-obsidian-five-different-methods/) and [Omnivore](https://omnivore.app/)
+
 Have you ever wanted to copy a whole article into your Obsidian vault? This is referred to as “clipping”, as if you cut an article out of a newspaper and pasted it into your scrapbook. If that sounds interesting to you, then keep reading. We’ll discuss the many different ways for clipping articles into Obsidian.
 
 ## Table of Contents
