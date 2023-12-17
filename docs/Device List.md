@@ -1,7 +1,9 @@
 ---
 tags:
   - hardware
+title: Device List
 ---
+
 My homelab has a suite of servers powering it, from Raspberry Pis to Dell Optiplexes. They are all clustered with [[nomad]] to provide a highly available cluster of hardware to run my services on.
 
 | Device Model       | RAM  | Count |

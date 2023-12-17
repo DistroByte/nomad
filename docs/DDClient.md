@@ -2,7 +2,9 @@
 tags:
   - services
   - infrastructure
+title: DDClient
 ---
+
 [Ddclient](https://ddclient.net/) updates dynamic DNS entries for accounts on a wide range of dynamic DNS services.
 
 As I run all my services at home, that IP address is subject to change at the whim of my ISP, thus this service allows me to update the DNS records on [Cloudflare](https://cloudflare.com) to match those IP address changes.

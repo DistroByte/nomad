@@ -2,7 +2,9 @@
 tags:
   - services
   - infrastructure
+title: Vaultwarden
 ---
+
 [Vaultwarden](https://github.com/dani-garcia/vaultwarden) is an unofficial Bitwarden compatible server written in Rust. It has many capabilities that mimic [Bitwarden](https://bitwarden.com/) premium.
 
 Vaultwarden is deployed and configured with the [vaultwarden](../jobs/vaultwarden.hcl) job alongside a [PostgreSQL](PostgreSQL.md) database.
