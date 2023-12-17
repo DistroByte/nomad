@@ -17,6 +17,9 @@ job "traefik" {
       port "admin" {
         static = 8081
       }
+      port "voice" {
+        static = 64738
+      }
     }
 
     service {
@@ -72,6 +75,12 @@ job "traefik" {
 
   [entryPoints.traefik]
     address = ":8081"
+
+  [entryPoints.voice-tcp]
+    address = ":64738"
+  
+  [entryPoints.voice-udp]
+    address = ":64738/udp"
 
 [providers.consulCatalog]
   prefix = "traefik"
