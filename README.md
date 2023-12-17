@@ -14,4 +14,4 @@ See the [jobs/](jobs/) directory.
 
 ## Ansible
 
-See the [ansible](ansible/) directory.
+See the [ansible/](ansible/) directory.
