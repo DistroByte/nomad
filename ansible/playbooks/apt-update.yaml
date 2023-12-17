@@ -9,7 +9,7 @@
     check_hashicorp: false
     upgrade: false
     max_parallel: "{{ 1 if update_hashicorp | bool else '60%' }}"
-    packages: "{{ packages | default([]) }}"
+    package_list: "{{ packages | default([]) }}"
 
   tasks:
     - name: Mark Hashicorp products as held back
@@ -58,6 +58,6 @@
     - name: Install packages
       become: true
       apt:
-        name: "{{ packages }}"
+        name: "{{ package_list }}"
         state: latest
-      when: packages | length > 0
+      when: package_list | length > 0
