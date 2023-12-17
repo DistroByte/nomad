@@ -8,14 +8,17 @@ job "traefik" {
   }
   group "traefik" {
     network {
-      port "http"{
+      port "http" {
         static = 80
       }
       port "https" {
         static = 443
       }
-      port "admin"{
+      port "admin" {
         static = 8081
+      }
+      port "voice" {
+        static = 64738
       }
     }
 
@@ -27,17 +30,17 @@ job "traefik" {
     task "traefik" {
       driver = "docker"
       config {
-        image = "traefik:2.8"
+        image        = "traefik:2.8"
         network_mode = "host"
-        
+
         volumes = [
           "local/traefik.toml:/etc/traefik/traefik.toml",
-	  "local/traefik_dynamic.toml:/etc/traefik/traefik_dynamic.toml"
+          "local/traefik_dynamic.toml:/etc/traefik/traefik_dynamic.toml"
         ]
       }
 
       template {
-        data = <<EOF
+        data        = <<EOF
 [api]
   dashboard = true
   insecure = true
@@ -73,6 +76,12 @@ job "traefik" {
   [entryPoints.traefik]
     address = ":8081"
 
+  [entryPoints.voice-tcp]
+    address = ":64738"
+  
+  [entryPoints.voice-udp]
+    address = ":64738/udp"
+
 [providers.consulCatalog]
   prefix = "traefik"
   exposedByDefault = false
@@ -97,7 +106,7 @@ EOF
       }
 
       template {
- 	data = <<EOH
+        data        = <<EOH
 [http.routers.synophotos]
   rule = "Host(`photos.dbyte.xyz`)"
   entryPoints = ["websecure"]
