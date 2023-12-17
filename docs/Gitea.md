@@ -1,6 +1,7 @@
 ---
 tags:
   - services
+  - infrastructure
 ---
 # Gitea
 

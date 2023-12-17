@@ -1,3 +1,22 @@
+# Ansible playbook to update and upgrade apt packages on a Debian based system
+# This playbook is intended to be run on a regular basis to keep the system up to date
+# It can also be used to check for, and upgrade to, new versions of Hashicorp products
+# (nomad, consul, vault). The playbook does nothing by default, you need to set the
+# variables to enable the different features.
+
+# Examples
+# Check for updates to Hashicorp products
+# ansible-playbook -i inventory update.yml -e "check_hashicorp=true"
+
+# Update Hashicorp products
+# ansible-playbook -i inventory update.yml -e "update_hashicorp=true"
+
+# Update all packages (except hashicorp products)
+# ansible-playbook -i inventory update.yml -e "upgrade=true"
+
+# Install packages
+# ansible-playbook -i inventory update.yml -e "packages=['vim', 'htop']"
+
 ---
 - name: Apt update and upgrade
   hosts: all
