@@ -1,16 +1,12 @@
 ---
 title: Flexoki
+tags:
+  - resources
+  - to_read
+created: 2023-12-17, 3:07:14 am
+author: Steph Ango
+source: https://stephango.com/flexoki
 ---
-
-author:: Steph Ango
-
-source:: [Flexoki](https://stephango.com/flexoki)
-
-clipped:: [[2023-12-06]]
-
-published:: 
-
-#resources #to_read
 
 Flexoki is an inky color scheme for prose and code. Flexoki is designed for reading and writing on digital screens. It is inspired by analog printing inks and warm shades of paper.
 
@@ -18,11 +14,11 @@ Flexoki is minimalistic and high-contrast. The colors are calibrated for legibil
 
 Flexoki is [open-source](https://github.com/kepano/flexoki) under the MIT license. Flexoki is available for many popular apps listed below, including [Obsidian](https://stephango.com/obsidian) using my theme [Minimal](https://stephango.com/minimal).
 
-## Color palette
+## Color Palette
 
 Flexoki is the color palette used on this site. To switch between light and dark mode press the D key or use the toggle at the top of the page. Click any swatch to copy a color to your clipboard.
 
-## Syntax highlighting
+## Syntax Highlighting
 
 You can find examples of code on the pages for [Tidy Reader](https://stephango.com/tidy) and [Tidy URL](https://stephango.com/tidyurl).
 
@@ -88,7 +84,7 @@ Flexoki is available for the following apps and tools.
 
 Flexoki is MIT licensed. You are free to port Flexoki to any app. Please include attribution and a link to [stephango.com/flexoki](https://www.stephango.com/flexoki). You can submit your port to the list via pull request on the [Flexoki repo](https://github.com/kepano/flexoki).
 
-## Base tones
+## Base Tones
 
 Flexoki uses warm monochromatic base tones that blend the black ink tone with the base paper tone. 8 colors are used in light and dark mode:
 
@@ -194,13 +190,13 @@ Dark theme
 
 `bg`
 
-## Accent colors
+## Accent Colors
 
 8 accent colors are available for accents and syntax highlighting. Each color is available in two tones calibrated for light and dark modes.
 
 In the future, a full range of tones from 50 to 950 will be added. Unlike the base tones, colors cannot be blended using opacity because this desaturates the pigment effect.
 
-### Dark tones
+### Dark Tones
 
 Color
 
@@ -274,7 +270,7 @@ Dark theme
 
 `ma-2`
 
-### Light tones
+### Light Tones
 
 Color
 

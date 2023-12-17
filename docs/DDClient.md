@@ -3,6 +3,7 @@ tags:
   - services
   - infrastructure
 title: DDClient
+created: 2023-12-17, 3:07:14 am
 ---
 
 [Ddclient](https://ddclient.net/) updates dynamic DNS entries for accounts on a wide range of dynamic DNS services.

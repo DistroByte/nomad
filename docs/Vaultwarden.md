@@ -3,6 +3,7 @@ tags:
   - services
   - infrastructure
 title: Vaultwarden
+created: 2023-12-17, 3:07:14 am
 ---
 
 [Vaultwarden](https://github.com/dani-garcia/vaultwarden) is an unofficial Bitwarden compatible server written in Rust. It has many capabilities that mimic [Bitwarden](https://bitwarden.com/) premium.

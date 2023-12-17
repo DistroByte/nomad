@@ -1,16 +1,12 @@
 ---
 title: Clipping Articles into Obsidian - Obsidian Rocks
+tags:
+  - resources
+  - to_read
+created: 2023-12-17, 3:07:14 am
+author: Tim Miller
+source: https://obsidian.rocks/clipping-articles-into-obsidian/
 ---
-
-author:: Tim Miller
-
-source:: [Clipping Articles into Obsidian - Obsidian Rocks](https://obsidian.rocks/clipping-articles-into-obsidian/)
-
-clipped:: [[2023-12-06]]
-
-published:: 
-
-#resources #to_read
 
 Have you ever wanted to copy a whole article into your Obsidian vault? This is referred to as “clipping”, as if you cut an article out of a newspaper and pasted it into your scrapbook. If that sounds interesting to you, then keep reading. We’ll discuss the many different ways for clipping articles into Obsidian.
 
@@ -34,7 +30,7 @@ Additionally, it’s a little challenging to modify the template that this bookm
 
 Other than that, this bookmarklet is a great solution. Unlike a plugin it doesn’t require any installation, it’s easy to use, and it works consistently for small to medium size articles. It also pulls in some additional metadata (like author and publish date) which can be quite handy.
 
-### How to use the Bookmarklet
+### How to Use the Bookmarklet
 
 Go to [Kepano’s site](https://stephanango.com/obsidian-web-clipper) and follow the instructions. If you’re happy with the default options, then installation is quick and easy.
 
@@ -64,7 +60,7 @@ In my own testing, I found that rather than clicking the “Download” button, 
 
 ![A screenshot of the MarkDownload interface.](https://i0.wp.com/obsidian.rocks/wp-content/uploads/2023/08/markdownload-popup.png?resize=517%2C681&ssl=1)
 
-### How to use MarkDownload
+### How to Use MarkDownload
 
 Go to the store page for your web browser ([Firefox](https://addons.mozilla.org/en-GB/firefox/addon/markdownload/), [Chrome/Brave](https://chrome.google.com/webstore/detail/markdownload-markdown-web/pcmpcfapbekmbjjkdalcgopdkipoggdi), [Edge](https://microsoftedge.microsoft.com/addons/detail/hajanaajapkhaabfcofdjgjnlgkdkknm), or [Safari](https://apple.co/3tcU0pD)) and click “install”. Then click the MarkDownload icon whenever you want to clip an article.
 
@@ -97,7 +93,7 @@ There are three main downsides to this plugin:
 
 It you clip mostly short or medium length articles, this might be a great option for you!
 
-### How to use Obsidian Clipper
+### How to Use Obsidian Clipper
 
 Go to the [Obsidian Clipper Github repo](https://github.com/jplattel/obsidian-clipper) and follow the instructions.
 

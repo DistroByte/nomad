@@ -1,20 +1,12 @@
 ---
 title: Vim file navigation
+tags:
+  - resources
+  - to_read
+created: 2023-12-17, 3:07:14 am
+author: PetePete
+source: https://stackoverflow.com/questions/1445992/vim-file-navigation
 ---
-
-author:: PetePete
-
-source:: [Vim file navigation](https://stackoverflow.com/questions/1445992/vim-file-navigation)
-
-clipped:: [[2023-12-06]]
-
-published:: 
-
-#resources #to_read
-
-Save this answer.
-
-Show activity on this post.
 
 I don't find drilling down into subdirectories via plain old `:e` to be that cumbersome given a decent configuration for tab-completion.
 

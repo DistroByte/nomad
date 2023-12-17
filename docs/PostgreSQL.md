@@ -3,6 +3,7 @@ tags:
   - services
   - infrastructure
 title: PostgreSQL
+created: 2023-12-17, 3:07:14 am
 ---
 
 [PostgreSQL](https://www.postgresql.org/) is an SQL type database, much like MySQL. It has replication abilities and is widely supported.

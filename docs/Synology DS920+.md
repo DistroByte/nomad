@@ -2,6 +2,7 @@
 tags:
   - hardware
 title: Synology DS920+
+created: 2023-12-17, 3:07:14 am
 ---
 
 Storage for my homelab is provided by a [Synology](https://www.synology.com/en-global) NAS with 16TB (4x4TB) of raw storage, configured in a RAID5 to allow for ~10.5TB of usable storage.
