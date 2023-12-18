@@ -1,5 +1,8 @@
 {
   "pinned": [
-    "obsidian-minimal-settings:toggle-minimal-focus-mode"
+    "obsidian-minimal-settings:toggle-minimal-focus-mode",
+    "markdown:toggle-preview",
+    "theme:use-dark",
+    "theme:use-light"
   ]
 }
