@@ -75,7 +75,7 @@ EOH
 
       resources {
         cpu    = 800
-        memory = 1000
+        memory = 800
       }
     }
 
@@ -85,6 +85,11 @@ EOH
       config {
         image = "docker.io/library/redis:7"
         ports = ["redis"]
+      }
+      
+      resources {
+        cpu    = 300
+        memory = 50
       }
     }
   }
