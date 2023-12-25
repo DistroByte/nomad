@@ -9,6 +9,8 @@ job "nessus" {
 
   group "web" {
     network {
+      mode = "host"
+      
       port "http" {
         to = 8834
       }
@@ -19,11 +21,10 @@ job "nessus" {
       port = "http"
 
       check {
-        type     = "http"
+        type     = "tcp"
         path     = "/"
         interval = "10s"
         timeout  = "2s"
-	protocol = "https"
       }
     }
 
@@ -34,10 +35,13 @@ job "nessus" {
         image = "tenable/nessus:latest-ubuntu"
         ports = ["http"]
 
+	#volumes = [
+	#  "/data/nessus:/opt/nessus"
+	#]
       }
 
       resources {
-        memory = 800
+        memory = 1000
       }
     }
   }
