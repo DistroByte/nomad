@@ -3,7 +3,7 @@ job "paperless-backup" {
   type        = "batch"
 
   periodic {
-    cron             = "0 0 * * 0"
+    crons            = ["0 0 * * 0"]
     prohibit_overlap = true
   }
 
