@@ -1,0 +1,33 @@
+datacenter = "{{ nomad_datacenter_name }}"
+data_dir = "/opt/consul"
+encrypt = "{{ consul_generated_encrypt_key }}"
+verify_incoming = true
+verify_outgoing = true
+verify_server_hostname = true
+bind_addr = "{% raw %}{{ GetPrivateInterfaces | include \"network\" \"192.168.1.0/24\" | attr \"address\" }}{% endraw %}"
+client_addr = "0.0.0.0"
+
+ca_file = "/etc/consul.d/consul-agent-ca.pem"
+cert_file = "/etc/consul.d/{{ nomad_datacenter_name }}-server-consul-1.pem"
+key_file = "/etc/consul.d/{{ nomad_datacenter_name }}-server-consul-1-key.pem"
+
+auto_encrypt {
+  allow_tls = true
+}
+
+# This ugly line is to get the hostnames of the other consul servers, excluding the current host.
+# Consul cannot join itself, so we need to exclude the current host.
+retry_join = ["{{ groups.nomad|difference([inventory_hostname]) | join('", "')}}"]
+
+acl {
+  enabled = false
+  default_policy = "allow"
+  enable_token_persistence = true
+}
+
+performance {
+  raft_multiplier = 1
+}
+
+# TODO: change once DNS is running on a host
+recursors = ["192.168.1.6"] # adds DNS forwarding for non-`.consul` domains

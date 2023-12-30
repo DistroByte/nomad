@@ -1,0 +1,37 @@
+---
+- name: Configure system after first boot
+  hosts: all
+
+  tasks:
+    - name: Silence motd
+      become: true
+      file:
+        path: /etc/update-motd.d/*
+        mode: 0400
+        recurse: yes
+
+    - name: Get figlet hostname
+      become: true
+      shell: figlet -f slant {{ ansible_hostname }}
+      register: figlet_hostname
+      delegate_to: localhost
+
+    - name: Set /etc/motd to a static message
+      become: true
+      copy:
+        dest: /etc/motd
+        content: |
+          {{ figlet_hostname.stdout }}
+
+    - name: Set wifi country to IE
+      become: true
+      command: raspi-config nonint do_wifi_country IE
+      when: "'raspberry_pis' in group_names"
+
+    - name: Modify the /boot/cmdline.txt file to allow for cgroup stats
+      become: true
+      lineinfile:
+        path: /boot/config.txt
+        regexp: "rootwait$"
+        line: '\1 cgroup_enable=cpuset cgroup_enable=memory cgroup_memory=1'
+      when: "'raspberry_pis' in group_names"

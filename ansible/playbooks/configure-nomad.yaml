@@ -1,0 +1,72 @@
+---
+- name: Configure nomad
+  hosts: nomad
+
+  tasks:
+    - name: Add nomad user
+      become: true
+      user:
+        name: nomad
+        shell: /bin/false
+        system: yes
+
+    - name: Create nomad config directory
+      become: true
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: nomad
+        group: nomad
+        mode: 0750
+      with_items:
+        - /etc/nomad.d
+        - /opt/nomad
+
+    - name: Copy nomad base configuration
+      become: true
+      template:
+        src: nomad/nomad-base.hcl.j2
+        dest: /etc/nomad.d/nomad.hcl
+        owner: nomad
+        group: nomad
+        mode: 0640
+
+    - name: Copy nomad-client configuration
+      become: true
+      template:
+        src: nomad/nomad-client.hcl
+        dest: /etc/nomad.d/nomad-client.hcl
+        owner: nomad
+        group: nomad
+        mode: 0640
+
+    - name: Copy nomad-server configuration
+      become: true
+      template:
+        src: nomad/nomad-server.hcl.j2
+        dest: /etc/nomad.d/nomad-server.hcl
+        owner: nomad
+        group: nomad
+        mode: 0640
+
+    - name: Copy nomad systemd unit file
+      become: true
+      template:
+        src: nomad/nomad.service
+        dest: /etc/systemd/system/nomad.service
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: Reload systemd daemon
+      become: true
+      systemd:
+        daemon_reload: true
+
+    - name: Enable nomad service
+      become: true
+      systemd:
+        name: nomad
+        enabled: yes
+        state: started
+      when: ansible_check_mode == false

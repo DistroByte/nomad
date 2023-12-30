@@ -1,0 +1,48 @@
+---
+- name: Add users and groups
+  hosts: all
+  gather_facts: false
+
+  vars:
+    - users:
+        - name: distro
+          github: DistroByte
+          groups: ["sudo", "nomad", "docker", "consul"]
+          passwordless_sudo: true
+
+  tasks:
+    - name: Create groups
+      become: true
+      group:
+        name: "{{ item }}"
+        state: present
+      with_items: "{{ users | map(attribute='groups') | flatten | unique }}"
+
+    - name: Add users to groups
+      become: true
+      user:
+        name: "{{ item.name }}"
+        groups: "{{ item.groups }}"
+        append: yes
+      with_items: "{{ users }}"
+
+    - name: Add ssh key from Github account
+      become: true
+      authorized_key:
+        user: "{{ item.name }}"
+        key: "https://github.com/{{ item.github }}.keys"
+        manage_dir: yes
+        state: present
+        exclusive: false
+      with_items: "{{ users }}"
+      failed_when: false
+
+    - name: Set passwordless sudo
+      become: true
+      lineinfile:
+        dest: /etc/sudoers
+        line: "{{ item.name }} ALL=(ALL) NOPASSWD: ALL"
+        state: present
+        validate: visudo -cf %s
+      with_items: "{{ users }}"
+      when: item.name is defined and item.passwordless_sudo is true

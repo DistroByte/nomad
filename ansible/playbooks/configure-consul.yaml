@@ -1,0 +1,105 @@
+---
+- name: Configure consul
+  hosts: nomad
+
+  tasks:
+    - name: Add consul user
+      become: true
+      user:
+        name: consul
+        shell: /bin/false
+        system: yes
+
+    - name: Create consul directories
+      become: true
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: consul
+        group: consul
+      with_items:
+        - /etc/consul.d
+        - /opt/consul
+
+    - name: Copy consul base configuration
+      become: true
+      template:
+        src: consul/consul.hcl.j2
+        dest: /etc/consul.d/consul.hcl
+        owner: consul
+        group: consul
+        mode: 0640
+
+    - name: Copy consul-server configuration
+      become: true
+      template:
+        src: consul/consul-server.hcl.j2
+        dest: /etc/consul.d/consul-server.hcl
+        owner: consul
+        group: consul
+        mode: 0640
+
+    - name: Copy consul systemd unit file
+      become: true
+      template:
+        src: consul/consul.service
+        dest: /etc/systemd/system/consul.service
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: Reload systemd daemon
+      become: true
+      systemd:
+        daemon_reload: true
+
+    - name: Enable and start consul
+      become: true
+      systemd:
+        name: consul
+        enabled: yes
+        state: started
+      when: ansible_check_mode == false
+
+    - name: Install systemd-resolved
+      become: true
+      package:
+        name: systemd-resolved
+        state: present
+
+    - name: Ensure systemd-resolved config directory exists
+      become: true
+      file:
+        path: /etc/systemd/resolved.conf.d
+        state: directory
+
+    - name: Configure Consul DNS in systemd-resolved
+      become: true
+      copy:
+        dest: /etc/systemd/resolved.conf.d/consul.conf
+        content: |
+          [Resolve]
+          DNS=127.0.0.1:8600
+          DNSSEC=false
+          Domains=~consul node.consul service.consul
+
+    - name: Restart systemd-resolved
+      become: true
+      systemd:
+        name: systemd-resolved
+        enabled: yes
+        state: restarted
+      when: ansible_check_mode == false
+
+    - name: Remove resolv.conf symlink
+      become: true
+      file:
+        path: /etc/resolv.conf
+        state: absent
+
+    - name: Create resolv.conf symlink
+      become: true
+      file:
+        src: /run/systemd/resolve/stub-resolv.conf
+        dest: /etc/resolv.conf
+        state: link

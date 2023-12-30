@@ -1,0 +1,18 @@
+datacenter = "{{ nomad_datacenter_name }}"
+data_dir = "/opt/nomad"
+
+bind_addr = "0.0.0.0"
+
+advertise {
+  http = "{{ ansible_host }}"
+  rpc  = "{{ ansible_host }}"
+  serf = "{{ ansible_host }}"
+}
+
+telemetry {
+  collection_interval        = "1s"
+  disable_hostname           = true
+  prometheus_metrics         = true
+  publish_allocation_metrics = true
+  publish_node_metrics       = true
+}

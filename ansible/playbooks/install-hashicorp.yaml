@@ -3,30 +3,28 @@
   hosts: nomad
 
   tasks:
-      - name: Ensure required packages are installed
-        become: true
-        apt:
-            name: "{{ item }}"
-        with_items: ["software-properties-common", "gnupg"]
+    - name: Ensure required packages are installed
+      become: true
+      apt:
+        name: "{{ item }}"
+      with_items: ["software-properties-common", "gnupg"]
 
-      - name: Add Hashicorp apt key
-        become: true
-        shell:
-            cmd: "curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -"
+    - name: Add Hashicorp apt key
+      become: true
+      shell:
+        cmd: "curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo gpg --batch --yes --dearmor -o /etc/apt/keyrings/hashicorp.gpg"
 
-      - name: Get architecture
-        become: true
-        shell:
-            cmd: "dpkg --print-architecture"
-        register: result
+    - name: Get architecture
+      become: true
+      shell:
+        cmd: "dpkg --print-architecture"
+      register: result
 
-      - name: Add Hashicorp repository
-        become: true
-        shell:
-            'sudo apt-add-repository -y "deb [arch={{ result.stdout }}] https://apt.releases.hashicorp.com $(lsb_release
-            -cs) main"'
+    - name: Add Hashicorp repository
+      become: true
+      shell: 'sudo apt-add-repository -y "deb [arch={{ result.stdout }} signed-by=/etc/apt/keyrings/hashicorp.gpg] https://apt.releases.hashicorp.com $(lsb_release-cs) main"'
 
-      - name: Update apt
-        become: true
-        apt:
-            update_cache: yes
+    - name: Update apt
+      become: true
+      apt:
+        update_cache: yes
