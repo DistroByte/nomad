@@ -73,6 +73,11 @@ scrape_configs:
     target_label: 'node'
   - source_labels: ['__meta_consul_service']
     target_label: 'service'
+- job_name: 'gitlab_runner'
+  static_configs:
+  - targets: [ '192.168.1.4:9252' ]
+    labels:
+      service: 'gitlab_runner'
 EOF
 
         destination = "local/prometheus.yml"
