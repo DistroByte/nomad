@@ -45,7 +45,7 @@ job "actual" {
 
 
       config {
-        image = "actualbudget/actual-server:23.12.0"
+        image = "actualbudget/actual-server:24.1.0"
         ports = ["http"]
       }
 
