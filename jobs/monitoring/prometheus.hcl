@@ -24,6 +24,10 @@ job "prometheus" {
         image = "quay.io/prometheus/prometheus"
         ports = ["http"]
 
+	volumes = [
+	  "/data/prometheus:/prometheus"
+	]
+
         args = [
           "--config.file=$${NOMAD_TASK_DIR}/prometheus.yml",
           "--log.level=info",
@@ -39,11 +43,14 @@ job "prometheus" {
 global:
   scrape_interval: 10s
   evaluation_interval: 10s
+
 scrape_configs:
+
 - job_name: 'nomad_metrics'
   consul_sd_configs:
   - server: '{{ env "attr.unique.network.ip-address" }}:8500'
     services: ['nomad-client', 'nomad']
+
   relabel_configs:
   - source_labels: ['__meta_consul_tags']
     regex: '(.*)http(.*)'
@@ -54,12 +61,15 @@ scrape_configs:
   - source_labels: ['__address__']
     regex: '172(.*)'
     action: drop
+
   metrics_path: /v1/metrics
   params:
     format: ['prometheus']
+
 - job_name: 'application_metrics'
   consul_sd_configs:
   - server: '{{ env "attr.unique.network.ip-address" }}:8500'
+
   relabel_configs:
   - source_labels: ['__meta_consul_service']
     regex: 'nomad|nomad-client|consul'
@@ -67,12 +77,13 @@ scrape_configs:
     # Drop services which do not want to be scraped.
     # Typically used when a job does not expose prometheus metrics.
   - source_labels: ['__meta_consul_tags']
-    regex: '(.*)prometheus.io/scrape=false(.*)'
+    regex: '.*prometheus.io/scrape=false.*'
     action: 'drop'
   - source_labels: ['__meta_consul_node']
     target_label: 'node'
   - source_labels: ['__meta_consul_service']
     target_label: 'service'
+
 - job_name: 'gitlab_runner'
   static_configs:
   - targets: [ '192.168.1.4:9252' ]
