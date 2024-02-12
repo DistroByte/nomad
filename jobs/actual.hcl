@@ -10,15 +10,6 @@ job "actual" {
       }
     }
 
-    update {
-      max_parallel     = 1
-      canary           = 1
-      auto_promote     = true
-      auto_revert      = true
-      min_healthy_time = "30s"
-      healthy_deadline = "5m"
-    }
-
     service {
       name = "actual"
       port = "http"
@@ -32,11 +23,10 @@ job "actual" {
 
       tags = [
         "traefik.enable=true",
-        "traefik.port=${NOMAD_PORT_http}",
-        "traefik.docker.network=traefik_web",
         "traefik.http.routers.actual.rule=Host(`actual.dbyte.xyz`)",
         "traefik.http.routers.actual.tls=true",
         "traefik.http.routers.actual.tls.certresolver=lets-encrypt",
+	"prometheus.io/scrape=false"
       ]
     }
 
@@ -45,7 +35,7 @@ job "actual" {
 
 
       config {
-        image = "actualbudget/actual-server:24.2.0"
+        image = "actualbudget/actual-server:24.1.0"
         ports = ["http"]
       }
 
@@ -54,7 +44,6 @@ job "actual" {
 ACTUAL_UPLOAD_FILE_SIZE_LIMIT_MB=500
 DEBUG=debug:config
 EOF
-
         destination = "local/env"
         env         = true
       }

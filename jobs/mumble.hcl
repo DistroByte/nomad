@@ -7,7 +7,7 @@ job "mumble" {
     value     = "amd64"
   }
 
-  group "web" {
+  group "voice" {
     network {
       port "voice" {
         to = 64738
@@ -23,6 +23,7 @@ job "mumble" {
         "traefik.tcp.routers.mumble-tcp.tls.passthrough=true",
         "traefik.tcp.routers.mumble-tcp.entrypoints=voice-tcp",
         "traefik.udp.routers.mumble-udp.entrypoints=voice-udp",
+	"prometheus.io/scrape=false"
       ]
     }
 

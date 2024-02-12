@@ -41,6 +41,7 @@ job "home-assistant" {
           "traefik.http.routers.homeassistant.rule=Host(`ha.dbyte.xyz`)",
           "traefik.http.routers.homeassistant.tls.domains[0].sans=ha.dbyte.xyz",
           "traefik.http.routers.homeassistant.tls.certresolver=lets-encrypt",
+	  "prometheus.io/scrape=false"
         ]
 
         check {

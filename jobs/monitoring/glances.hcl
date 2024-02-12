@@ -16,7 +16,8 @@ job "glances" {
 
       tags = [
         "traefik.port=61208",
-        "traefik.frontend.rule=Host:glances.docker.localhost"
+        "traefik.frontend.rule=Host:glances.docker.localhost",
+ 	"prometheus.io/scrape=false"
       ]
     }
 
