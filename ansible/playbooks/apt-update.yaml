@@ -79,4 +79,5 @@
       apt:
         name: "{{ package_list }}"
         state: latest
+        update_cache: yes
       when: package_list | length > 0
