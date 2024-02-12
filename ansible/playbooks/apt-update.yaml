@@ -15,7 +15,7 @@
 # ansible-playbook -i inventory update.yml -e "upgrade=true"
 
 # Install packages
-# ansible-playbook -i inventory update.yml -e "packages=['vim', 'htop']"
+# ansible-playbook -i inventory update.yml -e "packages='vim, htop'"
 
 ---
 - name: Apt update and upgrade
