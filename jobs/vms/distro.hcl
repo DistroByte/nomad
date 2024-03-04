@@ -1,5 +1,5 @@
 job "distro-vm" {
-  datacenters = ["aperture"]
+  datacenters = ["dc1"]
 
   group "distro-vm" {
 
@@ -14,16 +14,16 @@ job "distro-vm" {
     task "distro-vm" {
       constraint {
         attribute = "${attr.unique.hostname}"
-        value     = "wheatley"
+        value     = "hermes"
       }
 
       resources {
-        cpu    = 12000
-        memory = 4096
+        cpu    = 1200
+        memory = 400
       }
 
       artifact {
-        source      = "https://cloud.debian.org/images/cloud/bullseye/latest/debian-11-genericcloud-amd64.qcow2"
+        source      = "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-genericcloud-amd64.qcow2"
         destination = "local/distro-vm.qcow2"
         mode        = "file"
       }
@@ -41,9 +41,9 @@ job "distro-vm" {
           "-netdev",
           "bridge,id=hn0",
           "-device",
-          "virtio-net-pci,netdev=hn0,id=nic1,mac=52:54:84:ba:49:01",
+          "virtio-net-pci,netdev=hn0,id=nic1,mac=52:54:84:ba:50:01",
           "-smbios",
-          "type=1,serial=ds=nocloud-net;s=http://136.206.16.5:8000/distro-vm/",
+          "type=1,serial=ds=nocloud-net;s=http://192.168.1.3:8090/distro-vm/",
         ]
       }
     }
