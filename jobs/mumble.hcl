@@ -39,7 +39,9 @@ job "mumble" {
 
       template {
         data        = <<EOF
-
+MUMBLE_SUPERUSER_PASSWORD="JaNLNcEwaetq"
+MUMBLE_CONFIG_WELCOMETEXT="Ahh! SuperNintendo Chalmers!"
+MUMBLE_CONFIG_ALLOWHTML=true
 EOF
         destination = "local/env"
         env         = true
