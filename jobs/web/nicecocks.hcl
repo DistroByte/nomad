@@ -23,8 +23,6 @@ job "nicecocks.biz" {
       tags = [
         "traefik.enable=true",
         "traefik.http.routers.nicecocks.rule=Host(`nicecocks.biz`)",
-        "traefik.http.routers.nicecocks.entrypoints=websecure",
-        "traefik.http.routers.nicecocks.tls.certresolver=lets-encrypt"
       ]
     }
 

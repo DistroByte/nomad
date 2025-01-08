@@ -23,8 +23,6 @@ job "crazybittabiz" {
       tags = [
         "traefik.enable=true",
         "traefik.http.routers.crazybittabiz.rule=Host(`crazybitta.biz`)",
-        "traefik.http.routers.crazybittabiz.entrypoints=websecure",
-        "traefik.http.routers.crazybittabiz.tls.certresolver=lets-encrypt"
       ]
     }
 

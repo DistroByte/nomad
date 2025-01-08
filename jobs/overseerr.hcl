@@ -23,9 +23,6 @@ job "overseerr" {
       tags = [
         "traefik.enable=true",
         "traefik.http.routers.overseerr.rule=Host(`request.dbyte.xyz`)",
-        "traefik.http.routers.overseerr.entrypoints=websecure",
-        "traefik.http.routers.overseerr.tls=true",
-        "traefik.http.routers.overseerr.tls.certresolver=lets-encrypt"
       ]
     }
 

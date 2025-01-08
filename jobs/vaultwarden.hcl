@@ -16,6 +16,14 @@ job "vaultwarden" {
       }
     }
 
+    volume "vaultwarden-data" {
+      type            = "csi"
+      read_only       = false
+      source          = "vaultwarden"
+      access_mode     = "single-node-writer"
+      attachment_mode = "file-system"
+    }
+
     service {
       name = "vaultwarden"
       port = "http"
@@ -23,8 +31,6 @@ job "vaultwarden" {
       tags = [
         "traefik.enable=true",
         "traefik.http.routers.vaultwarden.rule=Host(`vault.dbyte.xyz`)",
-        "traefik.http.routers.vaultwarden.entrypoints=websecure",
-        "traefik.http.routers.vaultwarden.tls.certresolver=lets-encrypt",
       ]
     }
 
@@ -34,20 +40,21 @@ job "vaultwarden" {
       config {
         image = "vaultwarden/server:latest"
         ports = ["http"]
+      }
 
-        volumes = [
-          "/data/vaultwarden/data:/data"
-        ]
+      volume_mount {
+        volume      = "vaultwarden-data"
+        destination = "/data"
+        read_only   = false
       }
 
       template {
         data = <<EOF
 DOMAIN=https://vault.dbyte.xyz
-DATABASE_URL=postgresql://{{ key "vault/db/user" }}:{{ key "vault/db/pass" }}@postgresql.service.consul/vaultwarden
 SIGNUPS_ALLOWED=false
 ADMIN_TOKEN={{ key "vault/admin/token" }}
-YUBICO_CLIENT_ID={{ key "vault/yubico/client_id" }}
-YUBICO_SECRET_KEY={{ key "vault/yubico/secret_key" }}
+YUBICO_CLIENT_ID={{ key "vault/yubico/client-id" }}
+YUBICO_SECRET_KEY={{ key "vault/yubico/secret" }}
 SMTP_HOST={{ key "mail/google/host" }}
 SMTP_FROM=vaultwarden@dbyte.xyz
 SMTP_PORT=465

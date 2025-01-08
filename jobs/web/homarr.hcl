@@ -23,9 +23,6 @@ job "homarr" {
       tags = [
         "traefik.enable=true",
         "traefik.http.routers.homarr.rule=Host(`home.dbyte.xyz`)",
-        "traefik.http.routers.homarr.entrypoints=websecure",
-        "traefik.http.routers.homarr.tls=true",
-        "traefik.http.routers.homarr.tls.certresolver=lets-encrypt"
       ]
     }
 
@@ -38,7 +35,6 @@ job "homarr" {
 
         volumes = [
           "/data/homarr/configs:/app/data/configs",
-          #"/data/homarr/data:/data",
           "/data/homarr/icons:/app/public/icons",
           "/data/homarr/img:/app/public/img"
         ]

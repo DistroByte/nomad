@@ -30,7 +30,7 @@ job "traefik" {
     task "traefik" {
       driver = "docker"
       config {
-        image        = "traefik:2.8"
+        image        = "traefik:latest"
         network_mode = "host"
 
         volumes = [
@@ -41,6 +41,23 @@ job "traefik" {
 
       template {
         data = <<EOF
+CLOUDFLARE_API_KEY={{ key cloudflare/key }} 
+CLOUDFLARE_EMAIL={{ key cloudflare/email }}
+EOF
+        destination = "local/env"
+        env = true
+      }
+
+      template {
+        data = <<EOF
+[log]
+  level = "INFO"
+
+[accesslog]
+
+[metrics]
+  [metrics.prometheus]
+
 [api]
   dashboard = true
   insecure = true
@@ -48,30 +65,41 @@ job "traefik" {
 [entryPoints]
   [entryPoints.web]
   address = ":80"
+
   [entryPoints.web.http.redirections.entryPoint]
     to = "websecure"
     scheme = "https"
 
   [entryPoints.websecure]
     address = ":443"
-  #[entryPoints.websecure.http.tls]
-  #  certresolver = "lets-encrypt"
-  #  [[entryPoints.websecure.http.tls.domains]]
-  #    main = "dbyte.xyz"
-  #    sans = ["*.dbyte.xyz"]
+    asDefault = true
 
-  #  [[entryPoints.websecure.http.tls.domains]]
-  #    main = "james-hackett.ie"
-  #    sans = ["*.james-hackett.ie"]
+    [entryPoints.websecure.http.tls]
+      certresolver = "lets-encrypt"
 
-  #  [[entryPoints.websecure.http.tls.domains]]
-  #    main = "dbyte.xyz"
-  #    sans = ["*.dbyte.xyz"]
+    [[entryPoints.websecure.http.tls.domains]]
+      main = "james-hackett.ie"
+      sans = ["*.james-hackett.ie"]
 
-  #  [[entryPoints.websecure.http.tls.domains]]
-  #    main = "prospector.ie"
-  #    sans = ["*.prospector.ie"]
+    [[entryPoints.websecure.http.tls.domains]]
+      main = "dbyte.xyz"
+      sans = ["*.dbyte.xyz"]
 
+    [[entryPoints.websecure.http.tls.domains]]
+      main = "ihatenixos.org"
+      sans = "*.ihatenixos.org"
+
+    [[entryPoints.websecure.http.tls.domains]]
+      main = "pint.ing"
+      sans = "*.pint.ing"
+
+    [[entryPoints.websecure.http.tls.domains]]
+      main = "crazybitta.biz"
+      sans = "*.crazybitta.biz"
+
+    [[entryPoints.websecure.http.tls.domains]]
+      main = "nicecocks.biz"
+      sans = "*.nicecocks.biz"
 
   [entryPoints.traefik]
     address = ":8081"
@@ -93,13 +121,15 @@ job "traefik" {
 
 [providers.nomad]
   prefix = "traefik"
+  exposedByDefault = false
   [providers.nomad.endpoint]
     address = "http://127.0.0.1:4646"
 
 [certificatesResolvers.lets-encrypt.acme]
   email = "jamesthackett1@gmail.com"
   storage = "local/acme.json"
-  [certificatesResolvers.lets-encrypt.acme.tlsChallenge]
+  [certificatesResolvers.lets-encrypt.acme.dnsChallenge]
+    provider = "cloudflare"
 
 [providers.file]
   filename = "local/traefik_dynamic.toml"
@@ -118,7 +148,7 @@ EOF
     certResolver = "lets-encrypt"
 
 [[http.services.synophotos.loadBalancer.servers]]
-  url = "http://192.168.1.5:5007/"
+  url = "http://192.168.0.5:5007/"
 
 [http.routers.synodrive]
   rule = "Host(`drive.dbyte.xyz`)"
@@ -128,7 +158,7 @@ EOF
     certResolver = "lets-encrypt"
 
 [[http.services.synodrive.loadBalancer.servers]]
-  url = "http://192.168.1.5:5002/"
+  url = "http://192.168.0.5:5002/"
 
 [http.routers.plausible]
   rule = "Host(`plausible.dbyte.xyz`)"
@@ -138,7 +168,17 @@ EOF
     certResolver = "lets-encrypt"
 
 [[http.services.plausible.loadBalancer.servers]]
-  url = "http://192.168.1.3:8000/"
+  url = "http://192.168.0.3:8000/"
+
+[http.routers.video]
+  rule = "Host(`video.dbyte.xyz`)"
+  entryPoints = ["websecure"]
+  service = "video"
+  [http.routers.video.tls]
+    certResolver = "lets-encrypt"
+
+[[http.services.video.loadBalancer.servers]]
+  url = "http://192.168.0.5:32400/"
 EOH
 
         destination = "local/traefik_dynamic.toml"

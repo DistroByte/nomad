@@ -23,8 +23,6 @@ job "pinting" {
       tags = [
         "traefik.enable=true",
         "traefik.http.routers.pinting.rule=Host(`pint.ing`)",
-        "traefik.http.routers.pinting.entrypoints=websecure",
-        "traefik.http.routers.pinting.tls.certresolver=lets-encrypt",
 	"prometheus.io/scrape=false"
       ]
     }

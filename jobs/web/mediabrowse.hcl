@@ -23,10 +23,6 @@ job "mediashare" {
       tags = [
         "traefik.enable=true",
         "traefik.http.routers.mediashare.rule=Host(`share.dbyte.xyz`)",
-        "traefik.http.routers.mediashare.entrypoints=websecure",
-        "traefik.http.routers.mediashare.tls=true",
-        "traefik.port=${NOMAD_PORT_http}",
-        "traefik.http.routers.mediashare.tls.certresolver=lets-encrypt",
         "traefik.frontend.passHostHeader=true",
         "traefik.http.routers.mediashare.middlewares=auth",
         "traefik.http.middlewares.auth.basicauth.users=share:$apr1$0QNuLBe0$.Emmh/KSVYHXJtLPtj2CW.",

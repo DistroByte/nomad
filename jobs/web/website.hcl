@@ -23,8 +23,6 @@ job "website" {
       tags = [
         "traefik.enable=true",
         "traefik.http.routers.website.rule=Host(`james-hackett.ie`)",
-        "traefik.http.routers.website.entrypoints=websecure",
-        "traefik.http.routers.website.tls.certresolver=lets-encrypt"
       ]
     }
 

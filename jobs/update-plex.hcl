@@ -3,7 +3,7 @@ job "plex-update" {
   type        = "batch"
 
   periodic {
-    crons            = ["0 0 1 1 1"]
+    crons            = ["@weekly"]
     prohibit_overlap = true
   }
 
@@ -26,7 +26,7 @@ job "plex-update" {
         data = <<EOH
 #/bin/bash
 
-ssh -i /home/distro/.ssh/id_ed25519 root@dionysus.internal "/usr/local/bin/docker container restart plex"
+ssh -i /home/distro/.ssh/id_ed25519 -oStrictHostKeyChecking=no root@192.168.0.5 "/usr/local/bin/docker container restart plex"
 EOH
 
         destination = "local/script.sh"

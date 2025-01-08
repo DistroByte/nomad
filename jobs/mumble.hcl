@@ -34,12 +34,13 @@ job "mumble" {
         image = "mumblevoip/mumble-server:latest"
         ports = ["voice"]
 
-        hostname = "mumble.dbyte.xyz"
+        #hostname = "mumble.dbyte.xyz"
+        hostname = "hermes.internal"
       }
 
       template {
         data        = <<EOF
-MUMBLE_SUPERUSER_PASSWORD="JaNLNcEwaetq"
+MUMBLE_SUPERUSER_PASSWORD={{ key "mumble/admin/password" }}
 MUMBLE_CONFIG_WELCOMETEXT="Ahh! SuperNintendo Chalmers!"
 MUMBLE_CONFIG_ALLOWHTML=true
 EOF

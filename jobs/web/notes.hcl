@@ -23,8 +23,6 @@ job "notes" {
       tags = [
         "traefik.enable=true",
         "traefik.http.routers.notes.rule=Host(`notes.dbyte.xyz`)",
-        "traefik.http.routers.notes.entrypoints=websecure",
-        "traefik.http.routers.notes.tls.certresolver=lets-encrypt",
 	"prometheus.io/scrape=false"
       ]
     }

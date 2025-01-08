@@ -23,8 +23,6 @@ job "ihatenixos" {
       tags = [
         "traefik.enable=true",
         "traefik.http.routers.ihatenixos.rule=Host(`ihatenixos.org`)",
-        "traefik.http.routers.ihatenixos.entrypoints=websecure",
-        "traefik.http.routers.ihatenixos.tls.certresolver=lets-encrypt",
 	"prometheus.io/scrape=false"
       ]
     }

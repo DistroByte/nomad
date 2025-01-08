@@ -23,8 +23,6 @@ job "blog" {
       tags = [
         "traefik.enable=true",
         "traefik.http.routers.blog.rule=Host(`blog.dbyte.xyz`)",
-        "traefik.http.routers.blog.entrypoints=websecure",
-        "traefik.http.routers.blog.tls.certresolver=lets-encrypt"
       ]
     }
 
