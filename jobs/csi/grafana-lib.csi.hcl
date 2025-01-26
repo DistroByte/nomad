@@ -1,10 +1,10 @@
-id        = "z2m"
-name      = "z2m"
+id        = "grafana-lib"
+name      = "grafana-lib"
 type      = "csi"
 plugin_id = "synology"
 
-capacity_min = "4GiB"
-capacity_max = "6GiB"
+capacity_min = "1GiB"
+capacity_max = "2GiB"
 
 capability {
   access_mode = "single-node-writer"

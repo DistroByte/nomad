@@ -1,10 +1,10 @@
-id        = "z2m"
-name      = "z2m"
+id        = "prometheus"
+name      = "prometheus"
 type      = "csi"
 plugin_id = "synology"
 
-capacity_min = "4GiB"
-capacity_max = "6GiB"
+capacity_min = "10GiB"
+capacity_max = "30GiB"
 
 capability {
   access_mode = "single-node-writer"
