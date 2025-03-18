@@ -42,7 +42,7 @@ clients:
     port: 5000
     https: false
     username: distro
-    password: {{ key synology/csi/password }}
+    password: {{ key "synology/csi/password" }}
 EOH
       destination = "local/csi.yaml"
       }

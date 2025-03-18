@@ -9,13 +9,13 @@ job "mumble" {
 
   group "voice" {
     network {
-      port "voice" {
+      port "voice-udp" {
         to = 64738
       }
     }
 
     service {
-      port = "voice"
+      port = "voice-udp"
 
       tags = [
         "traefik.enable=true",
@@ -23,7 +23,7 @@ job "mumble" {
         "traefik.tcp.routers.mumble-tcp.tls.passthrough=true",
         "traefik.tcp.routers.mumble-tcp.entrypoints=voice-tcp",
         "traefik.udp.routers.mumble-udp.entrypoints=voice-udp",
-	"prometheus.io/scrape=false"
+	      "prometheus.io/scrape=false"
       ]
     }
 
@@ -32,10 +32,10 @@ job "mumble" {
 
       config {
         image = "mumblevoip/mumble-server:latest"
-        ports = ["voice"]
+        ports = ["voice-udp"]
 
-        #hostname = "mumble.dbyte.xyz"
-        hostname = "hermes.internal"
+        hostname = "mumble.dbyte.xyz"
+        #hostname = "hermes.internal"
       }
 
       template {

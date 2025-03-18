@@ -3,8 +3,8 @@ name      = "gerry"
 type      = "csi"
 plugin_id = "synology"
 
-capacity_min = "2GiB"
-capacity_max = "3GiB"
+capacity_min = "6GiB"
+capacity_max = "10GiB"
 
 capability {
   access_mode = "single-node-writer"

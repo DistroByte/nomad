@@ -8,7 +8,7 @@ job "ghost" {
       port "http" {
         to = 2368
       }
-      port "metrics" {
+      port "metrics-http" {
         to = 8081
       }
     }
@@ -32,7 +32,7 @@ job "ghost" {
 
       tags = [
         "traefik.enable=true",
-        "traefik.http.routers.ghost.rule=Host(`photos.james-hackett.ie`) || Host(`ghost.james-hackett.ie`)",
+        "traefik.http.routers.ghost.rule=Host(`photo.james-hackett.ie`) || Host(`ghost.james-hackett.ie`)",
       ]
     }
 
@@ -52,13 +52,18 @@ job "ghost" {
       }
 
       env {
-        url = "https://photos.james-hackett.ie"
+        url = "https://photo.james-hackett.ie"
         admin__url = "https://ghost.james-hackett.ie"
         database__client = "sqlite3"
         database__connection__filename = "${NOMAD_ALLOC_DIR}/data/ghost.db"
         logging__level = "info"
         logging__transports = "[\"stdout\"]"
         privacy__useTinfoil = "true"
+      }
+
+      resources {
+        cpu    = 600
+        memory = 900
       }
     }
   }

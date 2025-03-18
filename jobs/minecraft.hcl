@@ -23,7 +23,7 @@ job "minecraft" {
         ports = ["mc-vanilla-port", "mc-vanilla-rcon"]
 
         volumes = [
-          "/data/mintraft:/data"
+          "/data/minecraft-fugitives:/data"
         ]
       }
 

@@ -1,75 +1,73 @@
 job "grafana" {
   datacenters = ["dc1"]
 
-  type = "service"
-
-  constraint {
-    attribute = "${attr.cpu.arch}"
-    value     = "amd64"
-  }
-
-  group "web" {
+  group "grafana" {
     network {
-      port "http" {
-        to = 3000
-      }
+      port "http" {}
     }
 
-    service {
-      name = "grafana"
-      port = "http"
-
-      check {
-        type     = "http"
-        path     = "/"
-        interval = "10s"
-        timeout  = "2s"
-      }
-
-      tags = [
-        "traefik.enable=true",
-        "traefik.port=${NOMAD_PORT_http}",
-        "traefik.docker.network=traefik_web",
-        "traefik.http.routers.grafana.rule=Host(`grafana.dbyte.xyz`)",
-        "traefik.http.routers.grafana.tls=true",
-        "traefik.http.routers.grafana.tls.certresolver=lets-encrypt",
-      ]
+    volume "grafana-lib" {
+      type            = "csi"
+      source          = "grafana-lib"
+      read_only       = false
+      attachment_mode = "file-system"
+      access_mode     = "single-node-writer"
     }
 
     task "grafana" {
       driver = "docker"
-
-      env {
-        GF_AUTH_BASIC_ENABLED = "false"
-        GF_INSTALL_PLUGINS    = "grafana-piechart-panel"
-        GF_SERVER_ROOT_URL    = "https://grafana.dbyte.xyz"
-      }
+      user = "0"
 
       config {
-        image = "grafana/grafana"
+        image = "grafana/grafana-oss"
         ports = ["http"]
-
-        volumes = [
-          "/data/grafana/:/var/lib/grafana"
-        ]
       }
-
-
+      
       template {
         data = <<EOH
-GF_DATABASE_TYPE=postgres
-GF_DATABASE_HOST=postgresql.service.consul
-GF_DATABASE_NAME=grafana
-GF_DATABASE_USER={{ key "grafana/db/user" }}
-GF_DATABASE_PASSWORD={{ key "grafana/db/pass" }}
 GF_FEATURE_TOGGLES_ENABLE=publicDashboards
+GF_SERVER_HTTP_PORT={{ env "NOMAD_PORT_http" }}
+GF_INSTALL_PLUGINS=grafana-piechart-panel
+GF_SERVER_ROOT_URL="https://grafana.dbyte.xyz"
 EOH
-
         destination = "local/file.env"
         env         = true
       }
-    }
 
+      volume_mount {
+        volume      = "grafana-lib"
+        destination = "/var/lib/grafana"
+      }
+
+      resources {
+        cpu    = 100
+        memory = 300
+      }
+
+      service {
+        name = "grafana"
+        port = "http"
+
+        tags = [
+          "traefik.enable=true",
+          "traefik.http.routers.grafana.rule=Host(`grafana.dbyte.xyz`)",
+        ]
+
+        check {
+          type     = "http"
+          path     = "/api/health"
+          interval = "10s"
+          timeout  = "2s"
+
+          success_before_passing   = "3"
+          failures_before_critical = "3"
+
+          check_restart {
+            limit = 3
+            grace = "60s"
+          }
+        }
+      }
+    }
   }
 }
-

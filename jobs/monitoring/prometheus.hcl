@@ -1,10 +1,6 @@
 job "prometheus" {
   datacenters = ["dc1"]
 
-  constraint {
-    attribute = "${attr.cpu.arch}"
-    value     = "amd64"
-  }
 
   group "prometheus" {
     network {
@@ -16,83 +12,130 @@ job "prometheus" {
     service {
       name = "prometheus"
       port = "http"
+
+      tags = [
+        "traefik.enable=false",
+        "traefik.http.routers.prometheus.rule=Host(`prometheus.dbyte.xyz`)",
+      ]
+
+      check {
+        type     = "http"
+        path     = "/-/healthy"
+        interval = "10s"
+        timeout  = "2s"
+
+        success_before_passing   = "3"
+        failures_before_critical = "3"
+
+        check_restart {
+          limit = 3
+          grace = "60s"
+        }
+      }
+    }
+
+    volume "prometheus" {
+      type            = "csi"
+      source          = "prometheus"
+      read_only       = false
+      attachment_mode = "file-system"
+      access_mode     = "single-node-writer"
     }
 
     task "prometheus" {
       driver = "docker"
+      user = "0"
       config {
         image = "quay.io/prometheus/prometheus"
         ports = ["http"]
 
-	volumes = [
-	  "/data/prometheus:/prometheus"
-	]
-
         args = [
-          "--config.file=$${NOMAD_TASK_DIR}/prometheus.yml",
+          "--config.file=/etc/prometheus/config/prometheus.yml",
           "--log.level=info",
           "--storage.tsdb.retention.time=90d",
+          "--storage.tsdb.retention.size=30GB",
           "--storage.tsdb.path=/prometheus",
           "--web.console.libraries=/usr/share/prometheus/console_libraries",
           "--web.console.templates=/usr/share/prometheus/consoles"
         ]
+
+        volumes = [
+          "local/config:/etc/prometheus/config",
+        ]
+      }
+
+      volume_mount {
+        volume      = "prometheus"
+        destination = "/prometheus"
+      }
+
+      artifact {
+        source      = "https://raw.githubusercontent.com/geerlingguy/internet-pi/master/internet-monitoring/prometheus/alert.rules"
+        destination = "local/config/"
       }
 
       template {
-        data = <<EOF
+        data = <<EOH
+---
 global:
-  scrape_interval: 10s
-  evaluation_interval: 10s
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
+  external_labels:
+    monitor: 'Alertmanager'
+
+rule_files:
+  - 'alert.rules'
 
 scrape_configs:
+  - job_name: 'prometheus'
+    scrape_interval: 5s
+    static_configs:
+      - targets: ['localhost:{{env "NOMAD_PORT_http"}}']
 
-- job_name: 'nomad_metrics'
-  consul_sd_configs:
-  - server: '{{ env "attr.unique.network.ip-address" }}:8500'
-    services: ['nomad-client', 'nomad']
+  - job_name: nomad
+    metrics_path: '/v1/metrics'
+    params:
+      format: ['prometheus']
+    consul_sd_configs:
+    - server: 'consul.service.consul:8500'
+      datacenter: 'dc1'
+      scheme: 'http'
+      services: ['nomad-client', 'nomad']
+      tags: ['http']
 
-  relabel_configs:
-  - source_labels: ['__meta_consul_tags']
-    regex: '(.*)http(.*)'
-    action: keep
-  - source_labels: ['__meta_consul_node']
-    target_label: 'node'
-    # If nomad is available on multiple IPs, drop the ones which are not scrapable
-  - source_labels: ['__address__']
-    regex: '172(.*)'
-    action: drop
+  - job_name: consul
+    metrics_path: '/v1/agent/metrics'
+    params:
+      format: ['prometheus']
+    scheme: 'http'
+    static_configs:
+    - targets:
+        [
+          {{range $index, $service := service "consul" "any"}}{{if ne $index 0}}, {{end}}'{{.Address}}:8500'{{end}}
+        ]
 
-  metrics_path: /v1/metrics
-  params:
-    format: ['prometheus']
+  - job_name: 'pihole'
+    consul_sd_configs:
+    - server: 'consul.service.consul:8500'
+      datacenter: 'dc1'
+      scheme: 'http'
+      services: ['prometheus-pihole-exporter']
 
-- job_name: 'application_metrics'
-  consul_sd_configs:
-  - server: '{{ env "attr.unique.network.ip-address" }}:8500'
+  - job_name: 'nodeexp'
+    static_configs:
+    consul_sd_configs:
+    - server: 'consul.service.consul:8500'
+      datacenter: 'dc1'
+      scheme: 'http'
+      services: ['node-exporter']
+EOH
 
-  relabel_configs:
-  - source_labels: ['__meta_consul_service']
-    regex: 'nomad|nomad-client|consul'
-    action: drop
-    # Drop services which do not want to be scraped.
-    # Typically used when a job does not expose prometheus metrics.
-  - source_labels: ['__meta_consul_tags']
-    regex: '.*prometheus.io/scrape=false.*'
-    action: 'drop'
-  - source_labels: ['__meta_consul_node']
-    target_label: 'node'
-  - source_labels: ['__meta_consul_service']
-    target_label: 'service'
-
-- job_name: 'gitlab_runner'
-  static_configs:
-  - targets: [ '192.168.1.4:9252' ]
-    labels:
-      service: 'gitlab_runner'
-EOF
-
-        destination = "local/prometheus.yml"
+        change_mode   = "signal"
+        change_signal = "SIGHUP"
+        destination   = "local/config/prometheus.yml"
       }
+
     }
   }
 }

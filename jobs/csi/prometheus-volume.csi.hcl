@@ -1,9 +1,10 @@
 id        = "prometheus"
 name      = "prometheus"
 type      = "csi"
+external_id = "27644b63-7e9a-4509-817a-34f9291d5f00"
 plugin_id = "synology"
 
-capacity_min = "10GiB"
+capacity_min = "20GiB"
 capacity_max = "30GiB"
 
 capability {

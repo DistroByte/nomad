@@ -10,7 +10,7 @@ job "nicecocks.biz" {
     }
 
     service {
-      name = "nicecocks"
+      name = "nicecocks.biz"
       port = "http"
 
       check {

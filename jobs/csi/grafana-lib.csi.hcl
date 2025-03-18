@@ -3,8 +3,8 @@ name      = "grafana-lib"
 type      = "csi"
 plugin_id = "synology"
 
-capacity_min = "1GiB"
-capacity_max = "2GiB"
+capacity_min = "5GiB"
+capacity_max = "10GiB"
 
 capability {
   access_mode = "single-node-writer"

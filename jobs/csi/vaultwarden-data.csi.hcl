@@ -3,8 +3,8 @@ name      = "vaultwarden"
 type      = "csi"
 plugin_id = "synology"
 
-capacity_min = "5GiB"
-capacity_max = "10GiB"
+capacity_min = "10GiB"
+capacity_max = "15GiB"
 
 capability {
   access_mode = "single-node-writer"
