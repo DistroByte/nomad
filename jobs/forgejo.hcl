@@ -1,4 +1,4 @@
-job "gitea" {
+job "forgejo" {
   datacenters = ["dc1"]
   type        = "service"
 
@@ -13,13 +13,13 @@ job "gitea" {
         to = 3000
       }
       port "ssh" {
-        static = 2222
+        static = 222
         to     = 22
       }
     }
 
     service {
-      name = "gitea"
+      name = "forgejo"
       port = "http"
 
       check {
@@ -31,21 +31,19 @@ job "gitea" {
 
       tags = [
         "traefik.enable=true",
-        "traefik.http.routers.gitea.rule=Host(`git.dbyte.xyz`)",
-        "traefik.http.routers.gitea.entrypoints=websecure",
-        "traefik.http.routers.gitea.tls.certresolver=lets-encrypt"
+        "traefik.http.routers.forgejo.rule=Host(`git.dbyte.xyz`)",
       ]
     }
 
-    task "gitea" {
+    task "forgejo" {
       driver = "docker"
 
       config {
-        image = "gitea/gitea"
+        image = "codeberg.org/forgejo/forgejo:10"
         ports = ["http"]
 
         volumes = [
-          "/data/gitea:/data",
+          "/data/forgejo:/data",
           "/etc/timezone:/etc/timezone:ro",
           "/etc/localtime:/etc/localtime:ro"
         ]
@@ -57,9 +55,9 @@ USER_UID = "1000"
 USER_GID = "1000"
 GITEA__database__DB_TYPE = "postgres"
 GITEA__database__HOST = "postgresql.service.consul"
-GITEA__database__NAME = "giteadb"
-GITEA__database__USER = "{{ key "gitea/db/user" }}"
-GITEA__database__PASSWD = "{{ key "gitea/db/pass" }}"
+GITEA__database__NAME = "forgejodb"
+GITEA__database__USER = "{{ key "forgejo/db/user" }}"
+GITEA__database__PASSWD = "{{ key "forgejo/db/pass" }}"
 
 GITEA__metrics__ENABLED = "true"
 EOF
