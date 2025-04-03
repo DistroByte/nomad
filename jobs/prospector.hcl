@@ -12,11 +12,11 @@ job "prospector" {
   }
 
   group "prospector" {
-    count = 2
+    count = 1
 
     network {
       port "api" {
-        to = 8080
+        to = 3434
       }
       port "http" {
         to = 80
@@ -28,25 +28,19 @@ job "prospector" {
       canary       = 1
     }
 
-    service {
-      name = "prospector"
-      port = "http"
-
-      check {
-        name     = "global_check"
-        type     = "http"
-        interval = "10s"
-        timeout  = "2s"
-        path     = "/"
-      }
-    }
-
     task "prospector-api" {
       driver = "docker"
-
-      config {
+                                                                                                                                                                                                 config {
         image = "git.dbyte.xyz/distro/prospector/api:latest"
         ports = ["api"]
+      }
+
+      template {
+        data = <<EOF
+GIN_MODE=release
+EOF
+        destination = "local/env"
+        env         = true
       }
 
       service {
@@ -76,8 +70,8 @@ job "prospector" {
       }
 
       resources {
-        cpu    = 128
-        memory = 128
+        cpu    = 60
+        memory = 60
       }
     }
 
@@ -93,26 +87,35 @@ job "prospector" {
         name = "prospector-frontend"
         port = "http"
 
+        check {
+          name     = "frontend_check"
+          type     = "http"
+          interval = "10s"
+          timeout  = "2s"
+          path     = "/"
+        }
+
         canary_tags = [
           "traefik.enable=true",
           "traefik.http.routers.prospector-frontend-canary.rule=Host(`canary.prospector.ie`)",
           "traefik.http.routers.prospector-frontend-canary.entrypoints=websecure",
-          "traefik.http.routers.prospector-frontend-canary.tls.certresolver=lets-encrypt"
+          "traefik.http.routers.prospector-frontend-canary.tls.certresolver=lets-encrypt",
+          "prometheus.io/scrape=false"
         ]
 
         tags = [
           "traefik.enable=true",
           "traefik.http.routers.prospector-frontend.rule=Host(`prospector.ie`)",
           "traefik.http.routers.prospector-frontend.entrypoints=websecure",
-          "traefik.http.routers.prospector-frontend.tls.certresolver=lets-encrypt"
+          "traefik.http.routers.prospector-frontend.tls.certresolver=lets-encrypt",
+          "prometheus.io/scrape=false"
         ]
       }
 
       resources {
-        cpu    = 128
-        memory = 128
+        cpu    = 30
+        memory = 30
       }
     }
   }
 }
-

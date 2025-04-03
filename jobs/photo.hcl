@@ -1,4 +1,4 @@
-job "ghost" {
+job "photo" {
   datacenters = ["dc1"]
 
   type = "service"
@@ -13,15 +13,16 @@ job "ghost" {
       }
     }
 
-
-    ephemeral_disk {
-      sticky  = true
-      migrate = true
-      size    = 1000
+    volume "photo-data" {
+      type            = "csi"
+      read_only       = false
+      source          = "photo"
+      access_mode     = "single-node-writer"
+      attachment_mode = "file-system"
     }
 
     service {
-      name = "ghost"
+      name = "photo"
       port = "http"
 
       check {
@@ -32,7 +33,7 @@ job "ghost" {
 
       tags = [
         "traefik.enable=true",
-        "traefik.http.routers.ghost.rule=Host(`photo.james-hackett.ie`) || Host(`ghost.james-hackett.ie`)",
+        "traefik.http.routers.photo.rule=Host(`photo.james-hackett.ie`) || Host(`admin-photo.james-hackett.ie`)",
       ]
     }
 
@@ -42,28 +43,28 @@ job "ghost" {
       config {
         image = "ghost:latest"
         ports = ["http"]
+      }
 
-        mount {
-          type = "bind"
-          source = "..${NOMAD_ALLOC_DIR}/data/"
-          target = "/var/lib/ghost/content/"
-          readonly = false
-        }
+      volume_mount {
+        volume      = "photo-data"
+        destination = "/var/lib/ghost/content"
+        read_only   = false
       }
 
       env {
         url = "https://photo.james-hackett.ie"
-        admin__url = "https://ghost.james-hackett.ie"
+        admin__url = "https://admin-photo.james-hackett.ie"
         database__client = "sqlite3"
-        database__connection__filename = "${NOMAD_ALLOC_DIR}/data/ghost.db"
+        database__connection__filename = "/var/lib/ghost/content/data/ghost.db"
         logging__level = "info"
         logging__transports = "[\"stdout\"]"
         privacy__useTinfoil = "true"
+        mail__from = "support@distrobyte.io"
       }
 
       resources {
         cpu    = 600
-        memory = 900
+        memory = 1000
       }
     }
   }

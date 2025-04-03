@@ -1,10 +1,11 @@
-id        = "homeassistant"
-name      = "homeassistant"
+id        = "photo"
+name      = "photo"
 type      = "csi"
+external_id = "67f5a328-2012-4fa8-b860-5a962a150907"
 plugin_id = "synology"
 
-capacity_min = "12GiB"
-capacity_max = "15GiB"
+capacity_min = "5GiB"
+capacity_max = "8GiB"
 
 capability {
   access_mode = "single-node-writer"
@@ -21,4 +22,3 @@ mount_options {
 parameters {
   location = "/volume1" 
 }
-

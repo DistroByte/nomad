@@ -1,5 +1,6 @@
 id        = "gerry"
 name      = "gerry"
+external_id = "802795ba-7ba1-47b9-97e7-c05158b90c67"
 type      = "csi"
 plugin_id = "synology"
 

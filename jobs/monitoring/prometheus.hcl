@@ -129,6 +129,14 @@ scrape_configs:
       datacenter: 'dc1'
       scheme: 'http'
       services: ['node-exporter']
+
+  - job_name: 'ghost-photo'
+    static_configs:
+    consul_sd_configs:
+    - server: 'consul.service.consul:8500'
+      datacenter: 'dc1'
+      scheme: 'http'
+      services: ['photo']
 EOH
 
         change_mode   = "signal"

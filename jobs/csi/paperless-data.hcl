@@ -1,5 +1,5 @@
-id        = "homeassistant"
-name      = "homeassistant"
+id        = "paperless"
+name      = "paperless"
 type      = "csi"
 plugin_id = "synology"
 
@@ -21,4 +21,3 @@ mount_options {
 parameters {
   location = "/volume1" 
 }
-

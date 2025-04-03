@@ -2,6 +2,10 @@ job "paperless" {
   datacenters = ["dc1"]
   type        = "service"
 
+  meta {
+    version = 1
+  }
+
   group "paperless-web" {
     network {
       port "http" {
@@ -12,6 +16,14 @@ job "paperless" {
       }
     }
 
+    volume "paperless-data" {
+      type            = "csi"
+      read_only       = false
+      source          = "paperless"
+      access_mode     = "single-node-writer"
+      attachment_mode = "file-system"
+    }
+
     service {
       name = "paperless"
       port = "http"
@@ -19,17 +31,13 @@ job "paperless" {
       check {
         type     = "http"
         path     = "/"
-        interval = "10s"
-        timeout  = "2s"
+        interval = "15s"
+        timeout  = "5s"
       }
 
       tags = [
         "traefik.enable=true",
         "traefik.http.routers.paperless.rule=Host(`paperless.dbyte.xyz`)",
-        "traefik.http.routers.paperless.entrypoints=websecure",
-        "traefik.http.routers.paperless.tls=true",
-        "traefik.port=${NOMAD_PORT_http}",
-        "traefik.http.routers.paperless.tls.certresolver=lets-encrypt",
         "traefik.http.middlewares.paperless.headers.contentSecurityPolicy=default-src 'self'; img-src 'self' data:"
       ]
     }
@@ -39,34 +47,34 @@ job "paperless" {
 
       env {
         PAPERLESS_REDIS  = "redis://${NOMAD_ADDR_redis}"
-        PAPERLESS_DBHOST = "postgresql.service.consul"
         PAPERLESS_PORT   = "${NOMAD_PORT_http}"
       }
 
       config {
         image = "ghcr.io/paperless-ngx/paperless-ngx:latest"
         ports = ["http"]
+      }
 
-        volumes = [
-          "/data/paperless/consume:/usr/src/paperless/consume",
-          "/data/paperless/data:/usr/src/paperless/data",
-          "/data/paperless/media:/usr/src/paperless/media",
-          "/data/paperless/export:/usr/src/paperless/export",
-          "/data/paperless/preconsume:/usr/src/paperless/preconsume",
-        ]
+      volume_mount {
+        volume      = "paperless-data"
+        destination = "/data"
+        read_only   = false
       }
 
       template {
         data = <<EOH
-PAPERLESS_DBPASS={{ key "paperless/db/pass" }}
-PAPERLESS_DBUSER={{ key "paperless/db/user" }}
 PAPERLESS_SECRETKEY={{ key "paperless/env/secret" }}
 PAPERLESS_URL={{ key "paperless/env/url" }}
 PAPERLESS_ADMIN_USER={{ key "paperless/admin/user" }}
-PAPERLESS_ADMIN_PASSWORD={{ key "paperless/admin/pass" }}
-PAPERLESS_PRE_CONSUME_SCRIPT={{ key "paperless/env/preconsume-script" }}
-PAPERLESS_ALLOWED_HOSTS="localhost,192.168.1.4,192.168.1.3,paperless.dbyte.xyz"
-PAPERLESS_CONSUMER_POLLING=1
+PAPERLESS_ADMIN_PASSWORD={{ key "paperless/admin/password" }}
+PAPERLESS_PRE_CONSUME_SCRIPT="/data/preconsume"
+PAPERLESS_CONSUMPTION_DIR="/data/consume"
+PAPERLESS_DATA_DIR="/data/data"
+PAPERLESS_EMPTY_TRASH_DIR="/data/trash"
+PAPERLESS_MEDIA_ROOT="/data/media"
+PAPERLESS_ALLOWED_HOSTS="localhost,192.168.0.4,192.168.0.3,paperless.dbyte.xyz"
+PAPERLESS_CONSUMER_POLLING=0
+PAPERLESS_TIME_ZONE=Europe/Dublin
 EOH
 
         destination = "local/file.env"

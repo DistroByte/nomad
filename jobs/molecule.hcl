@@ -34,6 +34,15 @@ job "molecule" {
     task "molecule" {
       driver = "docker"
 
+      template {
+        data        = <<EOF
+PROD=true
+API_KEY={{ key "molecule/apikey" }}
+EOF
+        destination = "local/env"
+        env         = true
+      }
+
       config {
         image = "ghcr.io/distrobyte/molecule:latest"
         ports = ["http"]
