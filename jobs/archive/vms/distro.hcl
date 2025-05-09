@@ -41,10 +41,10 @@ job "distro-vm" {
           "-netdev",
           "bridge,id=hn0",
           "-device",
-          "virtio-net-pci,netdev=hn0,id=nic1,mac=52:54:84:ba:50:01",
+          "virtio-net-pci,netdev=hn0,id=nic1,mac=52:54:84:ba:49:01",
           "-smbios",
           "type=1,serial=ds=nocloud-net;s=http://192.168.1.3:8090/distro-vm/",
-        ]
+	]
       }
     }
   }

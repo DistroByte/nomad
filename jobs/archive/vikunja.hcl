@@ -4,14 +4,18 @@ job "vikunja" {
 
   group "web" {
     network {
+      mode = "bridge"
       port "http" {
         to = 80
+	static = 80
       }
       port "db" {
-        static = 3306
+	to = 3306
+	static = 3306
       }
       port "api" {
         to = 3456
+	static = 3456
       }
     }
 
@@ -26,6 +30,13 @@ job "vikunja" {
         timeout  = "2s"
         path     = "/"
       }
+
+      tags = [
+        "traefik.enable=true",
+        "traefik.http.routers.vikunja-api.rule=Host(`todo.dbyte.xyz`)",
+        "traefik.http.routers.vikunja-api.entrypoints=websecure",
+        "traefik.http.routers.vikunja-api.tls.certResolver=lets-encrypt",
+      ]
     }
 
     task "vikunja-api" {
@@ -39,7 +50,7 @@ VIKUNJA_DATABASE_TYPE="mysql"
 VIKUNJA_DATABASE_USER="{{ key "vikunja/db/username" }}"
 VIKUNJA_DATABASE_DATABASE="{{ key "vikunja/db/database" }}"
 VIKUNJA_SERVICE_JWTSECRET="{{ key "vikunja/jwtsecret" }}"
-VIKUNJA_SERVICE_FRONTENDURL="https://todo.dbyte.xyz/"
+VIKUNJA_SERVICE_PUBLICURL="https://todo.dbyte.xyz/"
 VIKUNJA_SERVICE_ENABLEEMAILREMINDERS=1
 VIKUNJA_MAILER_ENABLED="true"
 VIKUNJA_MAILER_FORCESSL=false
@@ -56,55 +67,9 @@ EOH
         env         = true
       }
 
-      service {
-        port = "api"
-        name = "vikunja-api"
-
-        tags = [
-          "traefik.enable=true",
-          "traefik.http.routers.vikunja-api.rule=Host(`todo.dbyte.xyz`) && PathPrefix(`/api/v1`, `/dav/`, `/.well-known/`)",
-          "traefik.http.routers.vikunja-api.entrypoints=websecure",
-          "traefik.http.routers.vikunja-api.tls.certResolver=lets-encrypt",
-        ]
-      }
-
       config {
-        image = "vikunja/api"
-        ports = ["api"]
-      }
-    }
-
-    task "vikunja-frontend" {
-      driver = "docker"
-
-      service {
-        port = "http"
-        name = "vikunja-frontend"
-
-        check {
-          name     = "vikunja-frontend-check"
-          type     = "http"
-          interval = "10s"
-          timeout  = "2s"
-          path     = "/"
-        }
-
-        tags = [
-          "traefik.enable=true",
-          "traefik.http.routers.vikunja-frontend.rule=Host(`todo.dbyte.xyz`)",
-          "traefik.http.routers.vikunja-frontend.entrypoints=websecure",
-          "traefik.http.routers.vikunja-frontend.tls=true",
-          "traefik.http.routers.vikunja-frontend.tls.certresolver=lets-encrypt"
-        ]
-      }
-
-      env {
-        VIKUNJA_API_URL = "https://todo.dbyte.xyz/api/v1"
-      }
-
-      config {
-        image = "vikunja/frontend"
-        ports = ["http"]
+        image = "vikunja/vikunja"
+        ports = ["api", "http"]
       }
     }
 

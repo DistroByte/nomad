@@ -82,7 +82,7 @@ EOH
 	ports = ["db"]
 
         volumes = [
-          "unifi-network-controller-db:/data/db",
+          "/data/unifi-network-controller/db:/data/db",
 	  "/data/unifi-network-controller/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro"
         ]
       }
