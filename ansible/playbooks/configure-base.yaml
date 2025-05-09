@@ -23,11 +23,6 @@
         content: |
           {{ figlet_hostname.stdout }}
 
-    - name: Set wifi country to IE
-      become: true
-      command: raspi-config nonint do_wifi_country IE
-      when: "'raspberry_pis' in group_names"
-
     - name: Modify the /boot/cmdline.txt file to allow for cgroup stats
       become: true
       lineinfile:

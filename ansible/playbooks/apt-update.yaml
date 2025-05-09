@@ -9,7 +9,7 @@
 # ansible-playbook -i inventory update.yml -e "check_hashicorp=true"
 
 # Update Hashicorp products
-# ansible-playbook -i inventory update.yml -e "update_hashicorp=true"
+# ansible-playbook -i inventory update.yml -e "update_hashicorp=true upgrade=true"
 
 # Update all packages (except hashicorp products)
 # ansible-playbook -i inventory update.yml -e "upgrade=true"

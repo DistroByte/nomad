@@ -22,7 +22,7 @@
 
     - name: Add Hashicorp repository
       become: true
-      shell: 'sudo apt-add-repository -y "deb [arch={{ result.stdout }} signed-by=/etc/apt/keyrings/hashicorp.gpg] https://apt.releases.hashicorp.com $(lsb_release-cs) main"'
+      shell: 'sudo apt-add-repository -y "deb [arch={{ result.stdout }} signed-by=/etc/apt/keyrings/hashicorp.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main"'
 
     - name: Update apt
       become: true

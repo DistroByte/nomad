@@ -1,22 +1,6 @@
 zeus.internal
 hermes.internal
-raspi-1.internal
-raspi-2.internal
-raspi-3.internal
 
 [nomad]
 zeus.internal
 hermes.internal
-raspi-1.internal
-raspi-2.internal
-raspi-3.internal
-
-[raspberry_pis]
-raspi-1.internal
-raspi-2.internal
-raspi-3.internal
-
-[nomad:vars]
-nomad_server_bootstrap_expect = 5
-nomad_datacenter_name = "dc1"
-consul_generated_encrypt_key = "xNGJJaFMyG7SoP7RG4yhCVB3gsQgFeWxrJXf/okM/m8="
