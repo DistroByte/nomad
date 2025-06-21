@@ -8,6 +8,16 @@ job "molecule" {
   }
 
   group "server" {
+    update {
+      max_parallel      = 1
+      canary            = 1
+      min_healthy_time  = "20s"
+      healthy_deadline  = "5m"
+      progress_deadline = "10m"
+      auto_revert       = true
+      auto_promote      = true
+    }
+
     network {
       port "http" {
         to = 8080
@@ -33,6 +43,17 @@ job "molecule" {
 
     task "molecule" {
       driver = "docker"
+
+      config {
+        image = "ghcr.io/distrobyte/molecule:0.7.2"
+        ports = ["http"]
+
+        mount {
+          type   = "bind"
+          source = "local/config.yaml"
+          target = "/config.yaml"
+        }
+      }
 
       template {
         data        = <<EOF
@@ -80,21 +101,9 @@ EOF
         destination = "local/config.yaml"
       }
 
-      config {
-        image = "ghcr.io/distrobyte/molecule:latest"
-        ports = ["http"]
-
-        mount {
-          type   = "bind"
-          source = "local/config.yaml"
-          target = "/config.yaml"
-        }
-
-      }
-      
       resources {
         cpu    = 200
-        memory = 100
+        memory = 50
       }
     }
   }
