@@ -1,15 +1,25 @@
 {
   "strictLineBreaks": false,
-  "autoPairMarkdown": false,
+  "autoPairMarkdown": true,
   "tabSize": 2,
-  "useMarkdownLinks": true,
-  "newLinkFormat": "relative",
+  "useMarkdownLinks": false,
+  "newLinkFormat": "shortest",
   "alwaysUpdateLinks": true,
   "promptDelete": false,
-  "attachmentFolderPath": "docs/attachments",
-  "newFileLocation": "folder",
-  "newFileFolderPath": "docs",
+  "attachmentFolderPath": "./res",
+  "newFileLocation": "root",
+  "newFileFolderPath": "/",
   "showUnsupportedFiles": true,
   "propertiesInDocument": "visible",
-  "showInlineTitle": true
+  "showInlineTitle": false,
+  "pdfExportSettings": {
+    "includeName": false,
+    "pageSize": "Legal",
+    "landscape": false,
+    "margin": "0",
+    "downscalePercent": 100
+  },
+  "defaultViewMode": "source",
+  "vimMode": false,
+  "showLineNumber": false
 }

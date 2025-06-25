@@ -1,0 +1,12 @@
+{
+  "minimal-style@@h2-l": false,
+  "minimal-style@@tab-stacked-spine-orientation": "tab-stack-center",
+  "minimal-style@@h5-variant": "normal",
+  "minimal-style@@h6-variant": "normal",
+  "minimal-style@@pdf-dark-opacity": 1,
+  "minimal-style@@pdf-invert-dark": true,
+  "minimal-style@@pdf-page-style": "pdf-shadows-on",
+  "minimal-style@@metadata-heading-off": true,
+  "minimal-style@@metadata-add-property-off": true,
+  "minimal-style@@file-header-visibility": "minimal-tab-title-visible"
+}

@@ -1,0 +1,5 @@
+/* change dataviewjs marker to be invisible on Obsidian */
+
+li.dataview-result-list-li::marker {
+    content: none;
+}

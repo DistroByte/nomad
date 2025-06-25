@@ -1,0 +1,19 @@
+/* --------------- KEYBOARD KEY styling --------------- */
+kbd {
+    --_kbd-bg: var(--kbd-bg, hsl(222.86deg 3.06% 55.1%));
+    --_kbd-text: var(--kbd-text, hsl(220deg 4.23% 13.92%));
+    --_kbd-border: var(--kbd-border, hsl(228deg 3.94% 24.9%));
+    margin: 0px 0.1em;
+    padding: 0 5px;
+    border-radius: 3px;
+    min-width: 25px;
+    display: inline-block;
+    text-align: center;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 0.8rem;
+    border-width: 1px 3px 4px 2px;
+    border-style: solid;
+    background-color: var(--_kbd-bg);
+    color: var(--_kbd-text);
+    border-color: var(--_kbd-border);
+}

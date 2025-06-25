@@ -2,6 +2,11 @@
   "table-editor-obsidian",
   "obsidian-minimal-settings",
   "cycle-through-panes",
+  "obsidian-linter",
+  "obsidian-tasks-plugin",
+  "obsidian-excalidraw-plugin",
+  "omnisearch",
   "obsidian-git",
-  "obsidian-linter"
+  "obsidian-style-settings",
+  "obsidian-kanban"
 ]

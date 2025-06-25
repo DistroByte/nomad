@@ -1,4 +1,18 @@
 {
-  "accentColor": "",
-  "cssTheme": "Minimal"
+  "accentColor": "#4385be",
+  "cssTheme": "Minimal",
+  "theme": "obsidian",
+  "enabledCssSnippets": [
+    "tasks-backlink",
+    "heading-font-size",
+    "remove-dataview-bullets",
+    "kbd-tag",
+    "center-h2",
+    "center-headings",
+    "pdf-export"
+  ],
+  "baseFontSize": 16,
+  "showViewHeader": true,
+  "nativeMenus": false,
+  "showRibbon": false
 }
