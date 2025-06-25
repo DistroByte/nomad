@@ -1,8 +1,7 @@
 ---
-tags:
-  - hardware
 title: Device List
 created: 2023-12-17, 3:07:14 am
+tags: [hardware]
 ---
 
 My homelab has a suite of servers powering it, from Raspberry Pis to Dell Optiplexes. They are all clustered with [[nomad]] to provide a highly available cluster of hardware to run my services on.

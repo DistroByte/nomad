@@ -1,8 +1,7 @@
 ---
-tags:
-  - services
 title: Mumble
 created: 2023-12-17, 3:07:14 am
+tags: [services]
 ---
 
 Mumble is an open source voice over IP tool that allows for many users to all join one voice call. It also has rudimentary text channels. See [Mumble Wiki](https://wiki.mumble.info/wiki/Main_Page) for more information.
