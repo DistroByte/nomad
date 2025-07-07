@@ -23,6 +23,7 @@ job "website" {
       tags = [
         "traefik.enable=true",
         "traefik.http.routers.website.rule=Host(`james-hackett.ie`)",
+	"icon=https://flowcv.me/james-hackett/photo-nbqqnmpzf1j1.jpg",
       ]
     }
 

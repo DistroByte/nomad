@@ -23,7 +23,7 @@ job "ihatenixos" {
       tags = [
         "traefik.enable=true",
         "traefik.http.routers.ihatenixos.rule=Host(`ihatenixos.org`)",
-	"prometheus.io/scrape=false"
+        "icon=https://ihatenixos.org/favicon.ico",
       ]
     }
 
