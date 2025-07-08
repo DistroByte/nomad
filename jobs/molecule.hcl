@@ -45,7 +45,7 @@ job "molecule" {
       driver = "docker"
 
       config {
-        image = "ghcr.io/distrobyte/molecule:0.7.2"
+        image = "ghcr.io/distrobyte/molecule:0.9.1"
         ports = ["http"]
 
         mount {
@@ -78,8 +78,10 @@ standard_urls:
     url: "https://dionysus.internal:5001"
   - service: "photos"
     url: "https://photos.dbyte.xyz"
+    icon: "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/refs/heads/main/png/synology-photos.png"
   - service: "drive"
     url: "https://drive.dbyte.xyz"
+    icon: "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/refs/heads/main/png/synology-drive.png"
   - service: "plex"
     url: "https://video.dbyte.xyz"
   - service: "ghost"
@@ -90,6 +92,7 @@ standard_urls:
     url: "http://dionysus.internal:7878"
   - service: "pihole"
     url: "https://dionysus.internal/admin"
+    icon: "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/refs/heads/main/png/pi-hole.png"
   - service: "jackett"
     url: "http://dionysus.internal:9117"
   - service: "syncthing"

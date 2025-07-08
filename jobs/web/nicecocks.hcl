@@ -1,4 +1,4 @@
-job "nicecocks.biz" {
+job "nicecocks" {
   datacenters = ["dc1"]
   type        = "service"
 
@@ -10,7 +10,7 @@ job "nicecocks.biz" {
     }
 
     service {
-      name = "nicecocks.biz"
+      name = "nicecocks"
       port = "http"
 
       check {
@@ -23,6 +23,7 @@ job "nicecocks.biz" {
       tags = [
         "traefik.enable=true",
         "traefik.http.routers.nicecocks.rule=Host(`nicecocks.biz`)",
+        "icon=https://nicecocks.biz/favicon.ico"
       ]
     }
 

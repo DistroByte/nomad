@@ -26,6 +26,7 @@ job "mediashare" {
         "traefik.frontend.passHostHeader=true",
         "traefik.http.routers.mediashare.middlewares=auth",
         "traefik.http.middlewares.auth.basicauth.users=share:$apr1$0QNuLBe0$.Emmh/KSVYHXJtLPtj2CW.",
+        "icon=https://raw.githubusercontent.com/homarr-labs/dashboard-icons/refs/heads/main/png/files.png"
       ]
     }
 
