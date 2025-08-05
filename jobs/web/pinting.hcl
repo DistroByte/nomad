@@ -23,7 +23,7 @@ job "pinting" {
       tags = [
         "traefik.enable=true",
         "traefik.http.routers.pinting.rule=Host(`pint.ing`)",
-	"prometheus.io/scrape=false"
+        "prometheus.io/scrape=false"
       ]
     }
 

@@ -26,7 +26,7 @@ job "actual" {
         "traefik.http.routers.actual.rule=Host(`actual.dbyte.xyz`)",
         "traefik.http.routers.actual.tls=true",
         "traefik.http.routers.actual.tls.certresolver=lets-encrypt",
-	"prometheus.io/scrape=false"
+        "prometheus.io/scrape=false"
       ]
     }
 
@@ -40,7 +40,7 @@ job "actual" {
       }
 
       template {
-        data = <<EOF
+        data        = <<EOF
 ACTUAL_UPLOAD_FILE_SIZE_LIMIT_MB=500
 DEBUG=debug:config
 EOF

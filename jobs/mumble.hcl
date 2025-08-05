@@ -23,7 +23,7 @@ job "mumble" {
         "traefik.tcp.routers.mumble-tcp.tls.passthrough=true",
         "traefik.tcp.routers.mumble-tcp.entrypoints=voice-tcp",
         "traefik.udp.routers.mumble-udp.entrypoints=voice-udp",
-	      "prometheus.io/scrape=false"
+        "prometheus.io/scrape=false"
       ]
     }
 

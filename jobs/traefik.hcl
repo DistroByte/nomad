@@ -40,12 +40,12 @@ job "traefik" {
       }
 
       template {
-        data = <<EOF
-CLOUDFLARE_API_KEY={{ key cloudflare/key }} 
-CLOUDFLARE_EMAIL={{ key cloudflare/email }}
+        data        = <<EOF
+CLOUDFLARE_API_KEY={{ key "cloudflare/key" }} 
+CLOUDFLARE_EMAIL={{ key "cloudflare/email" }}
 EOF
         destination = "local/env"
-        env = true
+        env         = true
       }
 
       template {
@@ -142,43 +142,24 @@ EOF
         data = <<EOH
 [http.routers.synophotos]
   rule = "Host(`photos.dbyte.xyz`)"
-  entryPoints = ["websecure"]
   service = "synophotos"
-  [http.routers.synophotos.tls]
-    certResolver = "lets-encrypt"
 
 [[http.services.synophotos.loadBalancer.servers]]
   url = "http://192.168.0.5:5007/"
 
 [http.routers.synodrive]
   rule = "Host(`drive.dbyte.xyz`)"
-  entryPoints = ["websecure"]
   service = "synodrive"
-  [http.routers.synodrive.tls]
-    certResolver = "lets-encrypt"
 
 [[http.services.synodrive.loadBalancer.servers]]
   url = "http://192.168.0.5:5002/"
 
-[http.routers.plausible]
-  rule = "Host(`plausible.dbyte.xyz`)"
-  entryPoints = ["websecure"]
-  service = "plausible"
-  [http.routers.plausible.tls]
-    certResolver = "lets-encrypt"
-
-[[http.services.plausible.loadBalancer.servers]]
-  url = "http://192.168.0.3:8000/"
-
 [http.routers.video]
   rule = "Host(`video.dbyte.xyz`)"
-  entryPoints = ["websecure"]
   service = "video"
-  [http.routers.video.tls]
-    certResolver = "lets-encrypt"
 
 [[http.services.video.loadBalancer.servers]]
-  url = "http://192.168.0.5:32400/"
+  url = "http://192.168.0.5:8096/"
 EOH
 
         destination = "local/traefik_dynamic.toml"

@@ -1,52 +1,52 @@
 job "wger" {
-    datacenters = ["dc1"]
-    type        = "service"
+  datacenters = ["dc1"]
+  type        = "service"
 
-    group "web" {
-        network {
-            port "http" {
-                to = 8000
-            }
-            port "cache" {
-                static = 6379
-            }
-        }
+  group "web" {
+    network {
+      port "http" {
+        to = 8000
+      }
+      port "cache" {
+        static = 6379
+      }
+    }
 
-        service {
-            name = "wger"
-            port = "http"
+    service {
+      name = "wger"
+      port = "http"
 
-            check {
-                type     = "http"
-                path     = "/"
-                interval = "10s"
-                timeout  = "2s"
-            }
+      check {
+        type     = "http"
+        path     = "/"
+        interval = "10s"
+        timeout  = "2s"
+      }
 
-            tags = [
-                "traefik.enable=true",
-                "traefik.http.routers.wger.rule=Host(`wger.dbyte.xyz`)",
-                "traefik.http.routers.wger.entrypoints=websecure",
-                "traefik.http.routers.wger.tls.certresolver=lets-encrypt",
-		"prometheus.io/scrape=false"
-            ]
-        }
+      tags = [
+        "traefik.enable=true",
+        "traefik.http.routers.wger.rule=Host(`wger.dbyte.xyz`)",
+        "traefik.http.routers.wger.entrypoints=websecure",
+        "traefik.http.routers.wger.tls.certresolver=lets-encrypt",
+        "prometheus.io/scrape=false"
+      ]
+    }
 
-        task "wger-server" {
-            driver = "docker"
+    task "wger-server" {
+      driver = "docker"
 
-            config {
-                image = "wger/server:latest"
-                ports = ["http"]
+      config {
+        image = "wger/server:latest"
+        ports = ["http"]
 
-                volumes = [
-                    "/data/wger/media:/home/wger/media",
-                    "/data/wger/static:/home/wger/static"
-                ]
-            }
+        volumes = [
+          "/data/wger/media:/home/wger/media",
+          "/data/wger/static:/home/wger/static"
+        ]
+      }
 
-            template {
-                data = <<EOF
+      template {
+        data = <<EOF
 # Django's secret key, change to a 50 character random string if you are running
 # this instance publicly. For an online generator, see e.g. https://djecrety.ir/
 SECRET_KEY=$=7k0)&bwcpcl#$gdd*4)4lpqzjd^2b5y*g_3*xwk_y97iz2c0
@@ -177,28 +177,28 @@ DJANGO_CLEAR_STATIC_FIRST=False
 FROM_EMAIL='wger Workout Manager <wger@example.com>'
 EOF
 
-                destination = "local/env"
-                env         = true
-            }
-        }
-
-        task "cache" {
-            driver = "docker"
-
-            config {
-                image = "redis:latest"
-                ports = ["cache"]
-
-                volumes = [
-                    "/data/wger/media:/home/wger/media",
-                    "/data/wger/static:/home/wger/static"
-                ]
-            }
-
-            service {
-                name = "wger-cache"
-                port = "cache"
-            }
-        }
+        destination = "local/env"
+        env         = true
+      }
     }
+
+    task "cache" {
+      driver = "docker"
+
+      config {
+        image = "redis:latest"
+        ports = ["cache"]
+
+        volumes = [
+          "/data/wger/media:/home/wger/media",
+          "/data/wger/static:/home/wger/static"
+        ]
+      }
+
+      service {
+        name = "wger-cache"
+        port = "cache"
+      }
+    }
+  }
 }

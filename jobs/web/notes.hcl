@@ -13,17 +13,9 @@ job "notes" {
       name = "notes"
       port = "http"
 
-      #check {
-      #  type     = "http"
-      #  path     = "/blog/redbrick-maintenance-with-nomad.html"
-      #  interval = "10s"
-      #  timeout  = "2s"
-      #}
-
       tags = [
         "traefik.enable=true",
         "traefik.http.routers.notes.rule=Host(`notes.dbyte.xyz`)",
-	"prometheus.io/scrape=false"
       ]
     }
 

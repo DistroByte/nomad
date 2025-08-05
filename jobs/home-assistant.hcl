@@ -53,7 +53,7 @@ job "home-assistant" {
       config {
         image        = "homeassistant/home-assistant"
         network_mode = "host"
-        privileged = true
+        privileged   = true
       }
 
       volume_mount {
@@ -90,10 +90,10 @@ job "home-assistant" {
     task "mqtt" {
       driver = "docker"
       config {
-        image = "eclipse-mosquitto"
+        image        = "eclipse-mosquitto"
         network_mode = "host"
-        command = "mosquitto"
-        args = ["-c", "/mosquitto-no-auth.conf"]
+        command      = "mosquitto"
+        args         = ["-c", "/mosquitto-no-auth.conf"]
       }
 
       volume_mount {
@@ -112,17 +112,17 @@ job "home-assistant" {
       }
 
       service {
-         name = "mqtt"
-         port = "mqttdisc"
+        name = "mqtt"
+        port = "mqttdisc"
       }
     }
 
     task "zigbee2mqtt" {
       driver = "docker"
       config {
-        image = "koenkk/zigbee2mqtt"
+        image      = "koenkk/zigbee2mqtt"
         privileged = true
-        ports = ["z2mhttp"]
+        ports      = ["z2mhttp"]
 
         volumes = [
           "/run/udev:/run/udev:ro"
@@ -130,7 +130,7 @@ job "home-assistant" {
 
         devices = [
           {
-            host_path = "/dev/ttyACM0"
+            host_path      = "/dev/ttyACM0"
             container_path = "/dev/ttyACM0"
           }
         ]
@@ -145,7 +145,7 @@ job "home-assistant" {
       env {
         TZ = "Europe/Dublin"
       }
-      
+
       resources {
         cpu    = 100
         memory = 300

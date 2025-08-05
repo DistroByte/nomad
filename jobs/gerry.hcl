@@ -46,7 +46,7 @@ job "gerry" {
         image = "ghcr.io/distrobyte/gerry:latest"
         ports = ["http"]
       }
-      
+
       volume_mount {
         volume      = "gerry-data"
         destination = "/app"
@@ -54,7 +54,7 @@ job "gerry" {
       }
 
       template {
-        data = <<EOF
+        data        = <<EOF
 PROD=true
 EOF
         destination = "local/env"

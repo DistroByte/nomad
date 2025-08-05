@@ -6,16 +6,16 @@ job "vikunja" {
     network {
       mode = "bridge"
       port "http" {
-        to = 80
-	static = 80
+        to     = 80
+        static = 80
       }
       port "db" {
-	to = 3306
-	static = 3306
+        to     = 3306
+        static = 3306
       }
       port "api" {
-        to = 3456
-	static = 3456
+        to     = 3456
+        static = 3456
       }
     }
 

@@ -45,7 +45,7 @@ job "molecule" {
       driver = "docker"
 
       config {
-        image = "ghcr.io/distrobyte/molecule:0.9.1"
+        image = "ghcr.io/distrobyte/molecule:0.9.3"
         ports = ["http"]
 
         mount {
@@ -82,7 +82,7 @@ standard_urls:
   - service: "drive"
     url: "https://drive.dbyte.xyz"
     icon: "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/refs/heads/main/png/synology-drive.png"
-  - service: "plex"
+  - service: "jellyfin"
     url: "https://video.dbyte.xyz"
   - service: "ghost"
     url: "https://admin-photo.james-hackett.ie/ghost"

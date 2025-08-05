@@ -46,8 +46,8 @@ job "paperless" {
       driver = "docker"
 
       env {
-        PAPERLESS_REDIS  = "redis://${NOMAD_ADDR_redis}"
-        PAPERLESS_PORT   = "${NOMAD_PORT_http}"
+        PAPERLESS_REDIS = "redis://${NOMAD_ADDR_redis}"
+        PAPERLESS_PORT  = "${NOMAD_PORT_http}"
       }
 
       config {
@@ -94,7 +94,7 @@ EOH
         image = "docker.io/library/redis:7"
         ports = ["redis"]
       }
-      
+
       resources {
         cpu    = 300
         memory = 50

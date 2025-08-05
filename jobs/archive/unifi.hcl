@@ -24,7 +24,7 @@ job "unifi" {
         static = 8443
       }
       port "db" {
-	static = 27017
+        static = 27017
       }
     }
 
@@ -43,8 +43,8 @@ job "unifi" {
     task "unifi" {
       driver = "docker"
       config {
-        image = "ghcr.io/linuxserver/unifi-network-application"
-	network_mode = "host"
+        image        = "ghcr.io/linuxserver/unifi-network-application"
+        network_mode = "host"
 
         volumes = [
           "/data/unifi-network-controller/config:/config"
@@ -79,11 +79,11 @@ EOH
       driver = "docker"
       config {
         image = "mongo:4.4"
-	ports = ["db"]
+        ports = ["db"]
 
         volumes = [
           "/data/unifi-network-controller/db:/data/db",
-	  "/data/unifi-network-controller/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro"
+          "/data/unifi-network-controller/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro"
         ]
       }
     }

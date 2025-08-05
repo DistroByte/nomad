@@ -30,13 +30,13 @@ job "prospector" {
 
     task "prospector-api" {
       driver = "docker"
-                                                                                                                                                                                                 config {
+      config {
         image = "git.dbyte.xyz/distro/prospector/api:latest"
         ports = ["api"]
       }
 
       template {
-        data = <<EOF
+        data        = <<EOF
 GIN_MODE=release
 EOF
         destination = "local/env"
