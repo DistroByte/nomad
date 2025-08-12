@@ -39,6 +39,11 @@ job "photo" {
       attachment_mode = "file-system"
     }
 
+    ephemeral_disk {
+      size    = 300
+      migrate = true
+    }
+
     service {
       name = "photo"
       port = "http"
@@ -182,7 +187,7 @@ EOF
       driver = "docker"
 
       config {
-        image = "ghost/traffic-analytics:1.0.3"
+        image = "ghost/traffic-analytics:1.0.9"
         ports = ["metrics-http"]
       }
 
@@ -191,7 +196,7 @@ EOF
 NODE_ENV="production"
 PROXY_TARGET="{{ key "ghost/tinybird/api_url" }}/v0/events"
 SALT_STORE_TYPE="file"
-SALT_STORE_FILE_PATH="/data/salts.json"
+SALT_STORE_FILE_PATH="/alloc/data/salts.json"
 TINYBIRD_TRACKER_TOKEN="{{ key "ghost/tinybird/tracker_token" }}"
 LOG_LEVEL="trace"
 EOF
@@ -218,6 +223,9 @@ EOF
         cpu    = 100
         memory = 256
       }
+
+      # Kill timeout for graceful shutdown  
+      kill_timeout = "15s"
     }
   }
 }
