@@ -24,7 +24,7 @@ job "traefik" {
 
     service {
       name = "traefik-http"
-      port = "https"
+      port = "admin"
     }
 
     task "traefik" {
@@ -73,6 +73,9 @@ EOF
   [entryPoints.websecure]
     address = ":443"
     asDefault = true
+
+  [entryPoints.websecure.forwardedHeaders]
+    trustedIPs = ["127.0.0.1/32", "192.168.0.0/16"]
 
     [entryPoints.websecure.http.tls]
       certresolver = "lets-encrypt"
@@ -160,6 +163,19 @@ EOF
 
 [[http.services.video.loadBalancer.servers]]
   url = "http://192.168.0.5:8096/"
+
+[http.routers.photo-activitypub]
+  rule = "Host(`photo.james-hackett.ie`) && PathPrefix(`/.ghost/activitypub/`)"
+  service = "ghost-activitypub"
+  priority = 200
+
+[http.routers.photo-wellknown]
+  rule = "Host(`photo.james-hackett.ie`) && PathRegexp(`^/.well-known/(webfinger|nodeinfo)$`)"
+  service = "ghost-activitypub"  
+  priority = 200
+
+[[http.services.ghost-activitypub.loadBalancer.servers]]
+  url = "https://ap.ghost.org"
 EOH
 
         destination = "local/traefik_dynamic.toml"

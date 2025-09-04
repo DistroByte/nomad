@@ -73,7 +73,6 @@ job "home-assistant" {
 
         tags = [
           "traefik.enable=true",
-          "traefik.http.middlewares.httpsRedirect.redirectscheme.scheme=https",
           "traefik.http.routers.homeassistant.rule=Host(`ha.dbyte.xyz`)",
           "traefik.http.routers.homeassistant.tls.domains[0].sans=ha.dbyte.xyz",
           "icon=https://github.com/homarr-labs/dashboard-icons/blob/main/png/home-assistant.png?raw=true"

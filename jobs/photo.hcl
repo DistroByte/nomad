@@ -187,7 +187,7 @@ EOF
       driver = "docker"
 
       config {
-        image = "ghost/traffic-analytics:1.0.9"
+        image = "ghost/traffic-analytics:1.0.14"
         ports = ["metrics-http"]
       }
 
@@ -221,7 +221,7 @@ EOF
 
       resources {
         cpu    = 100
-        memory = 256
+        memory = 300
       }
 
       # Kill timeout for graceful shutdown  

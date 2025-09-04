@@ -1,4 +1,4 @@
-job "overseerr" {
+job "jellyseerr" {
   datacenters = ["dc1"]
   type        = "service"
 
@@ -10,35 +10,39 @@ job "overseerr" {
     }
 
     service {
-      name = "overseerr"
+      name = "jellyseerr"
       port = "http"
 
       check {
         type     = "http"
-        path     = "/"
+        path     = "/api/v1/status"
         interval = "10s"
         timeout  = "2s"
       }
 
       tags = [
         "traefik.enable=true",
-        "traefik.http.routers.overseerr.rule=Host(`request.dbyte.xyz`)",
+        "traefik.http.routers.jellyseerr.rule=Host(`request.dbyte.xyz`)",
       ]
     }
 
-    task "overseerr" {
+    task "jellyseerr" {
       driver = "docker"
 
       config {
-        image = "sctx/overseerr:latest"
+        image = "fallenbagel/jellyseerr:latest"
         ports = ["http"]
 
         mount {
           type     = "bind"
           target   = "/app/config"
-          source   = "/data/overseerr"
+          source   = "/data/jellyseerr/config"
           readonly = false
         }
+      }
+
+      env {
+        LOG_LEVEL = "info"
       }
 
       resources {
