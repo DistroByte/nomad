@@ -4,3 +4,6 @@ hermes.internal
 [nomad]
 zeus.internal
 hermes.internal
+
+[all:vars]
+ansible_user=distro

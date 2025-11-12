@@ -68,7 +68,7 @@ job "photo" {
       driver = "docker"
 
       config {
-        image      = "ghost:latest"
+        image      = "ghost:6.7.0"
         ports      = ["http"]
         entrypoint = ["/local/ghost-with-tinybird.sh"]
       }
