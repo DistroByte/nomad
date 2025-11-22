@@ -23,8 +23,6 @@ job "dcu-karting" {
       tags = [
         "traefik.enable=true",
         "traefik.http.routers.dcu-karting.rule=Host(`karting.crazybitta.biz`)",
-        "traefik.http.routers.dcu-karting.entrypoints=websecure",
-        "traefik.http.routers.dcu-karting.tls.certresolver=lets-encrypt"
       ]
     }
 

@@ -33,8 +33,6 @@ job "hedgedoc" {
         "traefik.enable=true",
         "traefik.port=${NOMAD_PORT_http}",
         "traefik.http.routers.md.rule=Host(`md.james-hackett.ie`)",
-        "traefik.http.routers.md.tls=true",
-        "traefik.http.routers.md.tls.certresolver=lets-encrypt",
         "alloc=${NOMAD_ALLOC_ID}"
       ]
     }

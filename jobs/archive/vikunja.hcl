@@ -34,8 +34,6 @@ job "vikunja" {
       tags = [
         "traefik.enable=true",
         "traefik.http.routers.vikunja-api.rule=Host(`todo.dbyte.xyz`)",
-        "traefik.http.routers.vikunja-api.entrypoints=websecure",
-        "traefik.http.routers.vikunja-api.tls.certResolver=lets-encrypt",
       ]
     }
 

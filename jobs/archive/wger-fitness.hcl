@@ -26,8 +26,6 @@ job "wger" {
       tags = [
         "traefik.enable=true",
         "traefik.http.routers.wger.rule=Host(`wger.dbyte.xyz`)",
-        "traefik.http.routers.wger.entrypoints=websecure",
-        "traefik.http.routers.wger.tls.certresolver=lets-encrypt",
         "prometheus.io/scrape=false"
       ]
     }

@@ -24,8 +24,6 @@ job "actual" {
       tags = [
         "traefik.enable=true",
         "traefik.http.routers.actual.rule=Host(`actual.dbyte.xyz`)",
-        "traefik.http.routers.actual.tls=true",
-        "traefik.http.routers.actual.tls.certresolver=lets-encrypt",
         "prometheus.io/scrape=false"
       ]
     }

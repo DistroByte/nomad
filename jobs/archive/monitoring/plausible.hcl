@@ -27,8 +27,6 @@ job "plausible" {
         tags = [
           "traefik.enable=true",
           "traefik.http.routers.plausible.rule=Host(`plausible.dbyte.xyz`)",
-          "traefik.http.routers.plausible.entrypoints=websecure",
-          "traefik.http.routers.plausible.tls.certresolver=lets-encrypt"
         ]
       }
 

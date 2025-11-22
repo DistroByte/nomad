@@ -43,6 +43,7 @@ job "traefik" {
         data        = <<EOF
 CLOUDFLARE_API_KEY={{ key "cloudflare/key" }} 
 CLOUDFLARE_EMAIL={{ key "cloudflare/email" }}
+NS1_API_KEY={{ key "ns1/key" }}
 EOF
         destination = "local/env"
         env         = true
@@ -52,8 +53,6 @@ EOF
         data = <<EOF
 [log]
   level = "INFO"
-
-[accesslog]
 
 [metrics]
   [metrics.prometheus]
@@ -78,7 +77,7 @@ EOF
     trustedIPs = ["127.0.0.1/32", "192.168.0.0/16"]
 
     [entryPoints.websecure.http.tls]
-      certresolver = "lets-encrypt"
+      certresolver = "cloudflare"
 
     [[entryPoints.websecure.http.tls.domains]]
       main = "james-hackett.ie"
@@ -128,11 +127,17 @@ EOF
   [providers.nomad.endpoint]
     address = "http://127.0.0.1:4646"
 
-[certificatesResolvers.lets-encrypt.acme]
+[certificatesResolvers.cloudflare.acme]
   email = "jamesthackett1@gmail.com"
   storage = "local/acme.json"
-  [certificatesResolvers.lets-encrypt.acme.dnsChallenge]
+  [certificatesResolvers.cloudflare.acme.dnsChallenge]
     provider = "cloudflare"
+
+[certificatesResolvers.ns1.acme]
+  email = "jamesthackett1@gmail.com"
+  storage = "local/acme.json"
+  [certificatesResolvers.ns1.acme.dnsChallenge]
+    provider = "ns1"
 
 [providers.file]
   filename = "local/traefik_dynamic.toml"

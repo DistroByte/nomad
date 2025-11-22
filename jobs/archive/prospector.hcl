@@ -50,15 +50,11 @@ EOF
         canary_tags = [
           "traefik.enable=true",
           "traefik.http.routers.prospector-api-canary.rule=Host(`canary.prospector.ie`) && PathPrefix(`/api`)",
-          "traefik.http.routers.prospector-api-canary.entrypoints=websecure",
-          "traefik.http.routers.prospector-api-canary.tls.certresolver=lets-encrypt"
         ]
 
         tags = [
           "traefik.enable=true",
           "traefik.http.routers.prospector-api.rule=Host(`prospector.ie`) && PathPrefix(`/api`)",
-          "traefik.http.routers.prospector-api.entrypoints=websecure",
-          "traefik.http.routers.prospector-api.tls.certresolver=lets-encrypt"
         ]
 
         check {
@@ -98,16 +94,12 @@ EOF
         canary_tags = [
           "traefik.enable=true",
           "traefik.http.routers.prospector-frontend-canary.rule=Host(`canary.prospector.ie`)",
-          "traefik.http.routers.prospector-frontend-canary.entrypoints=websecure",
-          "traefik.http.routers.prospector-frontend-canary.tls.certresolver=lets-encrypt",
           "prometheus.io/scrape=false"
         ]
 
         tags = [
           "traefik.enable=true",
           "traefik.http.routers.prospector-frontend.rule=Host(`prospector.ie`)",
-          "traefik.http.routers.prospector-frontend.entrypoints=websecure",
-          "traefik.http.routers.prospector-frontend.tls.certresolver=lets-encrypt",
           "prometheus.io/scrape=false"
         ]
       }

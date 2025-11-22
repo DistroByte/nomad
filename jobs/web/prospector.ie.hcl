@@ -23,8 +23,6 @@ job "prospector.ie" {
       tags = [
         "traefik.enable=true",
         "traefik.http.routers.prospector.rule=Host(`prospector.ie`)",
-        "traefik.http.routers.prospector.entrypoints=websecure",
-        "traefik.http.routers.prospector.tls.certresolver=lets-encrypt"
       ]
     }
 

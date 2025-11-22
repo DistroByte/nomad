@@ -23,10 +23,7 @@ job "collegeshare" {
       tags = [
         "traefik.enable=true",
         "traefik.http.routers.collegeshare.rule=Host(`college.dbyte.xyz`)",
-        "traefik.http.routers.collegeshare.entrypoints=websecure",
-        "traefik.http.routers.collegeshare.tls=true",
         "traefik.port=${NOMAD_PORT_http}",
-        "traefik.http.routers.collegeshare.tls.certresolver=lets-encrypt",
         "traefik.frontend.passHostHeader=true",
         "traefik.http.routers.collegeshare.middlewares=auth",
         "traefik.http.middlewares.auth.basicauth.users=share:$apr1$0QNuLBe0$.Emmh/KSVYHXJtLPtj2CW.",
