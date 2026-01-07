@@ -45,7 +45,7 @@ job "molecule" {
       driver = "docker"
 
       config {
-        image = "ghcr.io/distrobyte/molecule:0.9.4"
+        image = "ghcr.io/distrobyte/molecule:0.9.5"
         ports = ["http"]
 
         mount {

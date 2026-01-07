@@ -2,10 +2,6 @@ job "paperless" {
   datacenters = ["dc1"]
   type        = "service"
 
-  meta {
-    version = 1
-  }
-
   group "paperless-web" {
     network {
       port "http" {
@@ -51,7 +47,7 @@ job "paperless" {
       }
 
       config {
-        image = "ghcr.io/paperless-ngx/paperless-ngx:latest"
+        image = "ghcr.io/paperless-ngx/paperless-ngx:2.20.3"
         ports = ["http"]
       }
 

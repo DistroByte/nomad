@@ -43,7 +43,7 @@ job "gerry" {
       driver = "docker"
 
       config {
-        image = "ghcr.io/distrobyte/gerry:0.5.2"
+        image = "ghcr.io/distrobyte/gerry:0.5.3"
         ports = ["http"]
       }
 

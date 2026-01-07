@@ -3,6 +3,10 @@ job "photo" {
 
   type = "service"
 
+  meta {
+    version = "1"
+  }
+
   group "web" {
     count = 1
 
@@ -29,12 +33,23 @@ job "photo" {
       port "metrics-http" {
         to = 3000
       }
+      port "db" {
+        to = 3306
+      }
     }
 
     volume "photo-data" {
       type            = "csi"
       read_only       = false
       source          = "photo"
+      access_mode     = "single-node-writer"
+      attachment_mode = "file-system"
+    }
+
+    volume "photo-db" {
+      type            = "csi"
+      read_only       = false
+      source          = "photo-db"
       access_mode     = "single-node-writer"
       attachment_mode = "file-system"
     }
@@ -68,7 +83,7 @@ job "photo" {
       driver = "docker"
 
       config {
-        image      = "ghost:6.10.1"
+        image      = "ghost:6.10.3"
         ports      = ["http"]
         entrypoint = ["/local/ghost-with-tinybird.sh"]
       }
@@ -151,8 +166,12 @@ EOF
         data        = <<EOF
 url="https://{{ key "ghost/domain" }}"
 admin__url="https://{{ key "ghost/admin_domain" }}"
-database__client="sqlite3"
-database__connection__filename="/var/lib/ghost/content/data/ghost.db"
+database__client="mysql"
+database__connection__host={{ env "NOMAD_IP_db" }}
+database__connection__port={{ env "NOMAD_HOST_PORT_db" }}
+database__connection__user={{ key "ghost/db/user" }}
+database__connection__password={{ key "ghost/db/password" }}
+database__connection__database={{ key "ghost/db/database" }}
 logging__level="info"
 logging__transports="[\"stdout\"]"
 mail__from="support@photo.james-hackett.ie"
@@ -172,6 +191,7 @@ tinybird__tracker__datasource="analytics_events"
 TINYBIRD_API_URL="{{ key "ghost/tinybird/api_url" }}"
 TINYBIRD_WORKSPACE_ID="{{ key "ghost/tinybird/workspace_id" }}"
 TINYBIRD_ADMIN_TOKEN="{{ key "ghost/tinybird/admin_token" }}"
+NODE_ENV=production
 EOF
         destination = "local/ghost.env"
         env         = true
@@ -187,7 +207,7 @@ EOF
       driver = "docker"
 
       config {
-        image = "ghost/traffic-analytics:1.0.21"
+        image = "ghost/traffic-analytics:1.0.23"
         ports = ["metrics-http"]
       }
 
@@ -224,8 +244,39 @@ EOF
         memory = 300
       }
 
-      # Kill timeout for graceful shutdown  
-      kill_timeout = "15s"
+      kill_timeout = "5s"
+    }
+
+    task "database" {
+      driver = "docker"
+
+      config {
+        image = "mysql:8.0"
+        ports = ["db"]
+      }
+
+      volume_mount {
+        volume      = "photo-db"
+        destination = "/var/lib/mysql"
+        read_only   = false
+      }
+
+      template {
+        data        = <<EOF
+MYSQL_ROOT_HOST=172.*.*.*
+MYSQL_ROOT_PASSWORD={{ key "ghost/db/rootpassword" }}
+MYSQL_DATABASE={{ key "ghost/db/database" }}
+MYSQL_USER={{ key "ghost/db/user" }}
+MYSQL_PASSWORD={{ key "ghost/db/password" }}
+EOF
+        destination = "local/db.env"
+        env         = true
+      }
+
+      resources {
+        cpu    = 400
+        memory = 600
+      }
     }
   }
 }
