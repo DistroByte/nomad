@@ -5,7 +5,7 @@ job "scratch" {
   group "group" {
     volume "scratch" {
       type            = "csi"
-      source          = "photo-db"
+      source          = "gerry"
       read_only       = false
       attachment_mode = "file-system"
       access_mode     = "single-node-writer"
