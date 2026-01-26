@@ -1,8 +1,3 @@
----
-title: Nomad
-created: 2023-12-17, 3:07:14 pm
----
-
 # Nomad
 
 This repo serves as an offsite store of my nomad job specs, useful ansible playbooks and my documentation.

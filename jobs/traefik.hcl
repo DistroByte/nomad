@@ -22,6 +22,11 @@ job "traefik" {
       }
     }
 
+    ephemeral_disk {
+      size    = 300 # MB
+      migrate = true
+    }
+
     service {
       name = "traefik-http"
       port = "admin"
@@ -129,15 +134,9 @@ EOF
 
 [certificatesResolvers.cloudflare.acme]
   email = "jamesthackett1@gmail.com"
-  storage = "local/acme.json"
+  storage = "{{ env "NOMAD_ALLOC_DIR" }}/data/acme.json"
   [certificatesResolvers.cloudflare.acme.dnsChallenge]
     provider = "cloudflare"
-
-[certificatesResolvers.ns1.acme]
-  email = "jamesthackett1@gmail.com"
-  storage = "local/acme.json"
-  [certificatesResolvers.ns1.acme.dnsChallenge]
-    provider = "ns1"
 
 [providers.file]
   filename = "local/traefik_dynamic.toml"
