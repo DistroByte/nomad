@@ -39,7 +39,7 @@ job "immich" {
 
       env {
         NODE_ENV              = "production"
-        REDIS_HOSTNAME        = "127.0.0.1"
+        REDIS_HOSTNAME        = "immich-valkey"
         IMMICH_MEDIA_LOCATION = "/data"
 
         TZ = "Europe/Dublin"
@@ -58,9 +58,7 @@ job "immich" {
         env         = true
         perms       = 400
         data        = <<EOH
-{{- with nomadVar "nomad/jobs/immich" }}
-DB_URL=postgres://{{- .db_user }}:{{- .db_pass }}@127.0.0.1:5432/immich
-{{- end }}
+DB_URL=postgres://{{- .db_user }}:{{- .db_pass }}@immich-postgres:${NOMAD_PORT_immich-postgres}/immich
 EOH
       }
 
@@ -96,8 +94,6 @@ EOH
 
   // --- Immich Worker ---
   group "worker" {
-
-    # Run two worker instancen, spread over the two DMZ nodes.
     count = "2"
     constraint {
       distinct_hosts = true
@@ -192,8 +188,6 @@ EOH
 
   // --- Immich Machine Learning ---
   group "machine-learning" {
-
-    # Run two ML instancen, spread over the two DMZ nodes.
     count = "2"
     constraint {
       distinct_hosts = true
