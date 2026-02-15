@@ -1,5 +1,6 @@
 id          = "immich-homes"
 name        = "immich-homes"
+external_id = "92346fcb-f9be-474c-97ec-0a6c61050d14"
 type        = "csi"
 plugin_id   = "synology"
 
@@ -13,7 +14,7 @@ capability {
 
 mount_options {
   fs_type     = "btrfs"
-  mount_flags = ["noatime", "soft", "async"]
+  mount_flags = ["noatime", "async"]
 }
 
 parameters {

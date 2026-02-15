@@ -10,7 +10,7 @@ job "immich" {
     }
 
     service {
-      name = "immich-api"
+      name = "immich"
 
       task = "server"
       port = "api"
@@ -35,11 +35,11 @@ job "immich" {
       config {
         image = "ghcr.io/immich-app/immich-server:release"
         force_pull = true
+        ports = ["api"]
       }
 
       env {
         NODE_ENV              = "production"
-        REDIS_HOSTNAME        = "immich-valkey"
         IMMICH_MEDIA_LOCATION = "/data"
 
         TZ = "Europe/Dublin"
@@ -58,7 +58,13 @@ job "immich" {
         env         = true
         perms       = 400
         data        = <<EOH
-DB_URL=postgres://{{- .db_user }}:{{- .db_pass }}@immich-postgres:${NOMAD_PORT_immich-postgres}/immich
+{{- range service "immich-postgres" }}
+DB_URL=postgres://{{ key "immich/db/user" }}:{{ key "immich/db/password" }}@{{ .Address }}:{{ .Port }}/immich
+{{- end }}
+{{- range service "immich-valkey" }}
+REDIS_HOSTNAME={{ .Address }}
+REDIS_PORT={{ .Port }}
+{{- end }}
 EOH
       }
 
@@ -94,7 +100,7 @@ EOH
 
   // --- Immich Worker ---
   group "worker" {
-    count = "2"
+    count = "1"
     constraint {
       distinct_hosts = true
     }
@@ -125,6 +131,8 @@ EOH
         image = "ghcr.io/immich-app/immich-server:release"
         force_pull = true
 
+        ports = ["worker"]
+
         devices = [ # map Intel QuickSync to container, allowing for hardware encoding
           {
             host_path = "/dev/dri"
@@ -135,7 +143,6 @@ EOH
 
       env {
         NODE_ENV              = "production"
-        REDIS_HOSTNAME        = "127.0.0.1"
         IMMICH_MEDIA_LOCATION = "/data"
 
         # user and group ID
@@ -150,15 +157,19 @@ EOH
         env         = true
         perms       = 400
         data        = <<EOH
-{{- with nomadVar "nomad/jobs/immich" }}
-DB_URL=postgres://{{- .db_user }}:{{- .db_pass }}@127.0.0.1:5432/immich
+{{- range service "immich-postgres" }}
+DB_URL=postgres://{{ key "immich/db/user" }}:{{ key "immich/db/password" }}@{{ .Address }}:{{ .Port }}/immich
+{{- end }}
+{{- range service "immich-valkey" }}
+REDIS_HOSTNAME={{ .Address }}
+REDIS_PORT={{ .Port }}
 {{- end }}
 EOH
       }
 
       resources {
         memory = 3500
-        cpu    = 4000
+        cpu    = 3000
       }
 
       volume_mount {
@@ -188,14 +199,14 @@ EOH
 
   // --- Immich Machine Learning ---
   group "machine-learning" {
-    count = "2"
+    count = "1"
     constraint {
       distinct_hosts = true
     }
 
     network {
       port "ml" {
-        to = 3003
+        static = 13030
       }
     }
 
@@ -222,13 +233,13 @@ EOH
       config {
         image = "ghcr.io/immich-app/immich-machine-learning:release"
         force_pull = true
+        ports = ["ml"]
       }
 
       env {
         TMPDIR       = "/tmp"
         MPLCONFIGDIR = "/local/mplconfig"
-        IMMICH_HOST  = "localhost"
-        IMMICH_PORT  = "3003"
+        IMMICH_PORT  = "13030"
 
         TZ           = "Europe/Dublin"
 
@@ -242,7 +253,7 @@ EOH
 
       resources {
         memory = 3072
-        cpu    = 4000
+        cpu    = 3000
       }
     }
   }
@@ -303,8 +314,8 @@ EOH
         command = "/bin/sh"
         args    = ["-c", <<EOF
 pg_dumpall -U "$POSTGRES_USER" | gzip --rsyncable > /var/lib/postgresql/data/backup/backup.$(date +"%Y%m%d%H%M").sql.gz
-echo "cleaning up backup files older than 3 days ..."
-find /var/lib/postgresql/data/backup -maxdepth 1 -type f -printf '%T@ %p\n' | sort -nr | tail -n +4 | cut -d' ' -f2- | xargs -r rm --
+echo "cleaning up backup files older than 7 days ..."
+find /var/lib/postgresql/data/backup -maxdepth 1 -type f -printf '%T@ %p\n' | sort -nr | tail -n +7 | cut -d' ' -f2- | xargs -r rm --
 EOF
         ]
       }
@@ -313,6 +324,7 @@ EOF
          image = "ghcr.io/immich-app/postgres:14-vectorchord0.4.3"
 
          force_pull = true
+         ports = ["postgres"]
       }
 
       env {
@@ -324,12 +336,10 @@ EOF
         env         = true
         perms       = 400
         data        = <<EOH
-{{- with nomadVar "nomad/jobs/immich" }}
-POSTGRES_PASSWORD    = {{- .db_pass }}
-POSTGRES_USER        = {{- .db_user }}
-DB_URL               = postgres://{{- .db_user }}:{{- .db_pass }}@127.0.0.1:5432/immich
+POSTGRES_PASSWORD    = {{ key "immich/db/password" }}
+POSTGRES_USER        = {{ key "immich/db/user" }}
+DB_URL               = postgres://{{ key "immich/db/user" }}:{{ key "immich/db/password" }}@127.0.0.1:5432/immich
 POSTGRES_INITDB_ARGS = '--data-checksums'
-{{- end }}
 EOH
       }
 
@@ -339,7 +349,7 @@ EOH
       }
 
       resources {
-        cpu    = 2000
+        cpu    = 1000
         memory = 1024
       }
     }
@@ -351,6 +361,7 @@ EOH
       config {
         image = "valkey/valkey:8.1"
         force_pull = true
+        ports = ["valkey"]
 
         args = [ "/local/valkey.conf" ]
       }
