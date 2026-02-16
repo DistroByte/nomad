@@ -100,7 +100,7 @@ EOH
 
   // --- Immich Worker ---
   group "worker" {
-    count = "1"
+    count = "2"
     constraint {
       distinct_hosts = true
     }
@@ -252,7 +252,7 @@ EOH
       }
 
       resources {
-        memory = 3072
+        memory = 3172
         cpu    = 3000
       }
     }
@@ -359,7 +359,7 @@ EOH
       driver = "docker"
 
       config {
-        image = "valkey/valkey:8.1"
+        image = "valkey/valkey:9"
         force_pull = true
         ports = ["valkey"]
 

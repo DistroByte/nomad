@@ -4,8 +4,8 @@ external_id = "cf832e1d-f872-433d-8a1b-4a7120cee56c"
 type        = "csi"
 plugin_id   = "synology"
 
-capacity_min = "5GiB"
-capacity_max = "8GiB"
+capacity_min = "10GiB"
+capacity_max = "18GiB"
 
 capability {
   access_mode     = "multi-node-multi-writer" # multi-node, both api server and worker tasks
