@@ -1,6 +1,6 @@
 id          = "immich-postgres"
 name        = "immich-postgres"
-external_id = "407e83c4-fc62-4083-8a67-64e7efc828c0"
+external_id = "220a342f-293b-407f-9303-fddd19f37ea9"
 type        = "csi"
 plugin_id   = "synology"
 

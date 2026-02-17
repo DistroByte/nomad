@@ -5,7 +5,7 @@ job "scratch" {
   group "group" {
     volume "scratch" {
       type            = "csi"
-      source          = "gerry"
+      source          = "immich-data"
       read_only       = false
       attachment_mode = "file-system"
       access_mode     = "single-node-writer"
@@ -18,7 +18,7 @@ job "scratch" {
       user   = "0:0"
 
       config {
-        image   = "alpine:latest"
+        image   = "debian:trixie-slim"
         command = "/bin/sh"
         args    = ["-c", "while true; do sleep 500; done"]
       }

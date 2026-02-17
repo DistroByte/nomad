@@ -1,22 +1,22 @@
 id          = "immich-data"
 name        = "immich-data"
-external_id = "cf832e1d-f872-433d-8a1b-4a7120cee56c"
 type        = "csi"
-plugin_id   = "synology"
-
-capacity_min = "10GiB"
-capacity_max = "18GiB"
+plugin_id   = "nfs"
 
 capability {
-  access_mode     = "multi-node-multi-writer" # multi-node, both api server and worker tasks
-  attachment_mode = "file-system"
+  access_mode = "multi-node-multi-writer"
+	// access_mode = "single-node-reader-only"
+	attachment_mode = "file-system"
+}
+
+context {
+  server = "dionysus.internal"
+  share = "/volume1/data"
+  subDir = "immich"
+  mountPermissions = "0"
 }
 
 mount_options {
-  fs_type     = "btrfs"
-  mount_flags = ["noatime", "async"]
-}
-
-parameters {
-  location = "/volume1"
+  fs_type = "nfs"
+  mount_flags = [ "soft", "async" ]
 }
