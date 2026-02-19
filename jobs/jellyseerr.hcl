@@ -30,8 +30,9 @@ job "jellyseerr" {
       driver = "docker"
 
       config {
-        image = "fallenbagel/jellyseerr:latest"
+        image = "ghcr.io/seerr-team/seerr:latest"
         ports = ["http"]
+        init  = true
 
         mount {
           type     = "bind"
