@@ -83,7 +83,7 @@ job "photo" {
       driver = "docker"
 
       config {
-        image      = "ghost:6.19.1"
+        image      = "ghost:6.26.0"
         ports      = ["http"]
         entrypoint = ["/local/ghost-with-tinybird.sh"]
       }
@@ -165,7 +165,7 @@ EOF
       template {
         data        = <<EOF
 url="https://{{ key "ghost/domain" }}"
-admin__url="https://{{ key "ghost/admin_domain" }}"
+#admin__url="https://{{ key "ghost/admin_domain" }}"
 database__client="mysql"
 database__connection__host={{ env "NOMAD_IP_db" }}
 database__connection__port={{ env "NOMAD_HOST_PORT_db" }}
@@ -207,7 +207,7 @@ EOF
       driver = "docker"
 
       config {
-        image = "ghost/traffic-analytics:1.0.80"
+        image = "ghost/traffic-analytics:1.0.175"
         ports = ["metrics-http"]
       }
 

@@ -91,9 +91,8 @@ EOH
     volume "immich-homes" { # external library location
       type            = "csi"
       source          = "immich-homes"
-      access_mode     = "multi-node-reader-only"
+      access_mode     = "multi-node-multi-writer"
       attachment_mode = "file-system"
-      read_only       = true
     }
   }
 
@@ -190,9 +189,8 @@ EOH
     volume "immich-homes" { # external library location
       type            = "csi"
       source          = "immich-homes"
-      access_mode     = "multi-node-reader-only"
+      access_mode     = "multi-node-multi-writer"
       attachment_mode = "file-system"
-      read_only       = true
     }
   }
 

@@ -47,7 +47,7 @@ job "paperless" {
       }
 
       config {
-        image = "ghcr.io/paperless-ngx/paperless-ngx:2.20.3"
+        image = "ghcr.io/paperless-ngx/paperless-ngx:2.20.13"
         ports = ["http"]
       }
 
