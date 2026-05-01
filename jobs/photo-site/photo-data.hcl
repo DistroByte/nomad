@@ -4,8 +4,8 @@ type        = "csi"
 external_id = "67f5a328-2012-4fa8-b860-5a962a150907"
 plugin_id   = "synology"
 
-capacity_min = "5GiB"
-capacity_max = "8GiB"
+capacity_min = "10GiB"
+capacity_max = "18GiB"
 
 capability {
   access_mode     = "single-node-writer"
