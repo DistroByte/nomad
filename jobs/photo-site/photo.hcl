@@ -207,7 +207,7 @@ EOF
       driver = "docker"
 
       config {
-        image = "ghost/traffic-analytics:1.0.175"
+        image = "ghost/traffic-analytics:1.0.208"
         ports = ["metrics-http"]
       }
 
