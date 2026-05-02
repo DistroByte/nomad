@@ -39,7 +39,7 @@ job "immich" {
       }
 
       env {
-        NODE_ENV              = "production"
+        NODE_ENV = "production"
         IMMICH_MEDIA_LOCATION = "/data"
         TZ = "Europe/Dublin"
 
@@ -140,7 +140,7 @@ EOH
       }
 
       env {
-        NODE_ENV              = "production"
+        NODE_ENV = "production"
         IMMICH_MEDIA_LOCATION = "/data"
 
         # user and group ID
@@ -167,7 +167,7 @@ EOH
 
       resources {
         memory = 3500
-        cpu    = 1500
+        cpu    = 1600
       }
 
       volume_mount {
