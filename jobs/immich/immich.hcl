@@ -257,6 +257,12 @@ EOH
 
   // --- Immich Postgres database and Valkey instance ---
   group "backend" {
+    // Primary postgres on hermes; replica group pins to zeus
+    constraint {
+      attribute = "${attr.unique.hostname}"
+      value     = "hermes"
+    }
+
     ephemeral_disk {
       size    = 300 # MB
       migrate = true
@@ -264,7 +270,8 @@ EOH
 
     network {
       port "postgres" {
-        to = 5432
+        static = 5432
+        to     = 5432
       }
 
       port "valkey" {
@@ -310,18 +317,24 @@ EOH
       action "backup-postgres" {
         command = "/bin/sh"
         args    = ["-c", <<EOF
-pg_dumpall -U "$POSTGRES_USER" | gzip --rsyncable > /var/lib/postgresql/data/backup/backup.$(date +"%Y%m%d%H%M").sql.gz
+pg_dumpall -U "$POSTGRES_USER" | gzip --rsyncable > /backup/backup.$(date +"%Y%m%d%H%M").sql.gz
 echo "cleaning up backup files older than 7 days ..."
-find /var/lib/postgresql/data/backup -maxdepth 1 -type f -printf '%T@ %p\n' | sort -nr | tail -n +7 | cut -d' ' -f2- | xargs -r rm --
+find /backup -maxdepth 1 -type f -printf '%T@ %p\n' | sort -nr | tail -n +7 | cut -d' ' -f2- | xargs -r rm --
 EOF
         ]
       }
 
       config {
-         image = "ghcr.io/immich-app/postgres:14-vectorchord0.4.3"
-
-         force_pull = true
-         ports = ["postgres"]
+        image      = "ghcr.io/immich-app/postgres:14-vectorchord0.4.3"
+        force_pull = true
+        ports      = ["postgres"]
+        args = [
+          "-c", "shared_preload_libraries=vchord.so",
+          "-c", "wal_level=replica",
+          "-c", "max_wal_senders=5",
+          "-c", "wal_keep_size=128",
+          "-c", "hot_standby=on",
+        ]
       }
 
       env {
@@ -345,13 +358,80 @@ EOH
         destination = "/var/lib/postgresql/data"
       }
 
+      volume_mount {
+        volume      = "immich-postgres-backup"
+        destination = "/backup"
+      }
+
       resources {
         cpu    = 1000
         memory = 1024
       }
     }
- 
-     # Valkey cache, used as an event queue to schedule jobs
+
+    # Idempotently creates the replication role and pg_hba.conf entry on every
+    # start so replication is ready without manual intervention after restore.
+    task "setup-replication" {
+      lifecycle {
+        hook    = "poststart"
+        sidecar = false
+      }
+
+      driver = "docker"
+
+      config {
+        image      = "ghcr.io/immich-app/postgres:14-vectorchord0.4.3"
+        entrypoint = ["/bin/sh"]
+        args       = ["/local/setup.sh"]
+      }
+
+      template {
+        destination = "secrets/env"
+        env         = true
+        perms       = "400"
+        data        = <<EOH
+PGPASSWORD={{ key "immich/db/password" }}
+EOH
+      }
+
+      template {
+        destination = "local/setup.sql"
+        data        = <<EOH
+DO $body$BEGIN
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'replicator') THEN
+    CREATE USER replicator WITH REPLICATION ENCRYPTED PASSWORD '{{ key "immich/db/replicator_password" }}';
+  END IF;
+END$body$;
+EOH
+      }
+
+      template {
+        destination = "local/setup.sh"
+        perms       = "755"
+        data        = <<EOH
+#!/bin/sh
+set -e
+until pg_isready -h hermes.internal -p 5432; do sleep 2; done
+psql -h hermes.internal -U "{{ key "immich/db/user" }}" -d postgres -f /local/setup.sql
+grep -q 'replication.*replicator' /var/lib/postgresql/data/pg_hba.conf || \
+  printf '\nhost replication replicator 0.0.0.0/0 scram-sha-256\n' \
+    >> /var/lib/postgresql/data/pg_hba.conf
+psql -h hermes.internal -U "{{ key "immich/db/user" }}" -d postgres -c 'SELECT pg_reload_conf()'
+EOH
+      }
+
+      volume_mount {
+        volume      = "immich-postgres"
+        destination = "/var/lib/postgresql/data"
+      }
+
+      resources {
+        cpu    = 100
+        memory = 64
+      }
+    }
+
+    # Valkey cache, used as an event queue to schedule jobs
     task "valkey" {
       driver = "docker"
 
@@ -380,10 +460,159 @@ EOH
     }
 
     volume "immich-postgres" {
+      type      = "host"
+      source    = "immich-postgres"
+      read_only = false
+    }
+
+    volume "immich-postgres-backup" {
       type            = "csi"
-      source          = "immich-postgres"
-      access_mode     = "single-node-writer"
+      source          = "immich-postgres-backup"
+      access_mode     = "multi-node-multi-writer"
       attachment_mode = "file-system"
+    }
+  }
+
+  // --- Immich Postgres replica (zeus) ---
+  group "backend-replica" {
+    // Replica on zeus local SSD; promote manually if hermes is lost (see docs/Immich.md)
+    constraint {
+      attribute = "${attr.unique.hostname}"
+      value     = "zeus"
+    }
+
+    network {
+      port "postgres" {
+        static = 5432
+        to     = 5432
+      }
+    }
+
+    service {
+      name = "immich-postgres-replica"
+      task = "postgres"
+      port = "postgres"
+
+      check {
+        type     = "script"
+        command  = "sh"
+        args     = ["-c", "psql -U $POSTGRES_USER -d immich -c 'SELECT 1' || exit 1"]
+        interval = "10s"
+        timeout  = "5s"
+      }
+    }
+
+    # Seeds the replica from the primary on first run via pg_basebackup.
+    # On subsequent starts it refreshes primary_conninfo so replication
+    # survives primary restarts on a different port.
+    task "replica-init" {
+      lifecycle {
+        hook    = "prestart"
+        sidecar = false
+      }
+
+      driver = "docker"
+
+      config {
+        image      = "ghcr.io/immich-app/postgres:14-vectorchord0.4.3"
+        entrypoint = ["/bin/sh"]
+        args       = ["/local/init-replica.sh"]
+      }
+
+      template {
+        destination = "local/init-replica.sh"
+        perms       = "755"
+        data        = <<EOH
+#!/bin/sh
+set -e
+DATA_DIR=/var/lib/postgresql/data
+
+if [ ! -f "$DATA_DIR/standby.signal" ]; then
+  echo "Seeding replica from hermes.internal:5432..."
+  until pg_isready -h hermes.internal -p 5432; do
+    echo "Waiting for primary..."
+    sleep 3
+  done
+  pg_basebackup \
+    -h hermes.internal \
+    -p 5432 \
+    -U replicator \
+    --pgdata="$DATA_DIR" \
+    --wal-method=stream \
+    --progress \
+    --checkpoint=fast
+  touch "$DATA_DIR/standby.signal"
+fi
+
+# Refresh primary_conninfo on every start so replication survives restarts
+sed -i '/^primary_conninfo/d' "$DATA_DIR/postgresql.auto.conf" 2>/dev/null || true
+printf "primary_conninfo = 'host=hermes.internal port=5432 user=replicator password=%s sslmode=prefer'\n" \
+  "$PGPASSWORD" >> "$DATA_DIR/postgresql.auto.conf"
+EOH
+      }
+
+      template {
+        destination = "secrets/replica.env"
+        env         = true
+        perms       = 400
+        data        = <<EOH
+PGPASSWORD = {{ key "immich/db/replicator_password" }}
+EOH
+      }
+
+      volume_mount {
+        volume      = "immich-postgres-replica"
+        destination = "/var/lib/postgresql/data"
+      }
+
+      resources {
+        cpu    = 200
+        memory = 256
+      }
+    }
+
+    task "postgres" {
+      driver = "docker"
+
+      config {
+        image      = "ghcr.io/immich-app/postgres:14-vectorchord0.4.3"
+        force_pull = true
+        ports      = ["postgres"]
+        args = [
+          "-c", "shared_preload_libraries=vchord.so",
+          "-c", "hot_standby=on",
+        ]
+      }
+
+      env {
+        TZ = "Europe/Dublin"
+      }
+
+      template {
+        destination = "secrets/variables.env"
+        env         = true
+        perms       = 400
+        data        = <<EOH
+POSTGRES_USER     = {{ key "immich/db/user" }}
+POSTGRES_PASSWORD = {{ key "immich/db/password" }}
+EOH
+      }
+
+      volume_mount {
+        volume      = "immich-postgres-replica"
+        destination = "/var/lib/postgresql/data"
+      }
+
+      resources {
+        cpu    = 500
+        memory = 512
+      }
+    }
+
+    volume "immich-postgres-replica" {
+      type      = "host"
+      source    = "immich-postgres-replica"
+      read_only = false
     }
   }
 }

@@ -1,30 +1,50 @@
 ---
-- name: Install Hashicorp apt repository
+- name: Install Hashicorp apt repository and packages
   hosts: nomad
+
+  vars:
+    arch_map:
+      x86_64: amd64
+      aarch64: arm64
+      armv7l: armhf
 
   tasks:
     - name: Ensure required packages are installed
       become: true
       apt:
-        name: "{{ item }}"
-      with_items: ["software-properties-common", "gnupg"]
+        name: ["software-properties-common", "gnupg", "curl"]
+        state: present
 
-    - name: Add Hashicorp apt key
+    - name: Create apt keyrings directory
+      become: true
+      file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: "0755"
+
+    - name: Download Hashicorp GPG key
+      become: true
+      get_url:
+        url: https://apt.releases.hashicorp.com/gpg
+        dest: /tmp/hashicorp.gpg
+        mode: "0644"
+
+    - name: Dearmor Hashicorp GPG key
       become: true
       shell:
-        cmd: "curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo gpg --batch --yes --dearmor -o /etc/apt/keyrings/hashicorp.gpg"
+        cmd: gpg --batch --yes --dearmor -o /etc/apt/keyrings/hashicorp.gpg /tmp/hashicorp.gpg
+        creates: /etc/apt/keyrings/hashicorp.gpg
 
-    - name: Get architecture
+    - name: Add Hashicorp apt repository
       become: true
-      shell:
-        cmd: "dpkg --print-architecture"
-      register: result
+      apt_repository:
+        repo: "deb [arch={{ arch_map[ansible_architecture] | default('amd64') }} signed-by=/etc/apt/keyrings/hashicorp.gpg] https://apt.releases.hashicorp.com {{ ansible_distribution_release }} main"
+        state: present
+        filename: hashicorp
 
-    - name: Add Hashicorp repository
-      become: true
-      shell: 'sudo apt-add-repository -y "deb [arch={{ result.stdout }} signed-by=/etc/apt/keyrings/hashicorp.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main"'
-
-    - name: Update apt
+    - name: Install Nomad and Consul
       become: true
       apt:
-        update_cache: yes
+        name: ["nomad", "consul"]
+        state: present
+        update_cache: true

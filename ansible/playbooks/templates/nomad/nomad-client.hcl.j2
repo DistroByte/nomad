@@ -1,0 +1,32 @@
+client {
+  enabled = true
+
+{% if inventory_hostname == 'hermes.internal' %}
+  host_volume "immich-postgres" {
+    path      = "/opt/nomad/volumes/immich-postgres"
+    read_only = false
+  }
+{% endif %}
+
+{% if inventory_hostname == 'zeus.internal' %}
+  host_volume "immich-postgres-replica" {
+    path      = "/opt/nomad/volumes/immich-postgres-replica"
+    read_only = false
+  }
+{% endif %}
+}
+
+plugin "raw_exec" {
+  config {
+    enabled = true
+  }
+}
+
+plugin "docker" {
+  config {
+    allow_privileged = true
+    volumes {
+      enabled = true
+    }
+  }
+}

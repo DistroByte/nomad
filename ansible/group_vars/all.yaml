@@ -1,0 +1,20 @@
+---
+nomad_datacenter_name: dc1
+nomad_server_bootstrap_expect: 2
+
+# UID/GID of the postgres user inside ghcr.io/immich-app/postgres
+# Verified with: docker run --rm ghcr.io/immich-app/postgres:14-vectorchord0.4.3 id postgres
+# Output: uid=999(postgres) gid=999(postgres) groups=999(postgres),101(ssl-cert)
+postgres_uid: 999
+postgres_gid: 999
+
+# Append the vault-encrypted Consul gossip key below with:
+# ansible-vault encrypt_string 'your-key-here' --name vault_consul_encrypt_key >> ansible/group_vars/all.yaml
+vault_consul_encrypt_key: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          32646333316531333139386265346239643235396266613431343766393535396561363434353133
+          3430333961323631653530363638333038643137323535340a626136613432333063663630396565
+          35303636393133313837636338383662626237653661313331613464346437623830663138333935
+          6431633232653663390a323964633962396234666634303133616334393065373530373237613265
+          37323031613432343366376663303335313562316131656138356561613532313639386162343661
+          6237323830393964346235343335323466396236333165663434

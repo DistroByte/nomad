@@ -1,0 +1,150 @@
+---
+# Deploys Nomad and Consul config to all nodes, creates host volume
+# directories, and ensures both services are running.
+#
+# Required vars (set in group_vars or pass with -e):
+#   nomad_datacenter_name        - e.g. "dc1"
+#   nomad_server_bootstrap_expect - e.g. 2
+#   consul_encrypt_key            - gossip encryption key (use ansible-vault)
+#
+# Generate a new encrypt key with: consul keygen
+- name: Configure Nomad and Consul
+  hosts: nomad
+  become: true
+
+  vars:
+    # Retrieve from a running node: consul keyring -list
+    consul_encrypt_key: "{{ vault_consul_encrypt_key }}"
+
+  tasks:
+    # --- Consul ---
+
+    - name: Create Consul config directory
+      file:
+        path: /etc/consul.d
+        state: directory
+        owner: consul
+        group: consul
+        mode: "0750"
+
+    - name: Deploy Consul base config
+      template:
+        src: templates/consul/consul.hcl.j2
+        dest: /etc/consul.d/consul.hcl
+        owner: consul
+        group: consul
+        mode: "0640"
+      notify: Reload Consul
+
+    - name: Deploy Consul server config
+      template:
+        src: templates/consul/consul-server.hcl.j2
+        dest: /etc/consul.d/consul-server.hcl
+        owner: consul
+        group: consul
+        mode: "0640"
+      notify: Reload Consul
+
+    - name: Deploy Consul systemd service
+      copy:
+        src: templates/consul/consul.service
+        dest: /etc/systemd/system/consul.service
+        mode: "0644"
+      notify:
+        - Reload systemd
+        - Restart Consul
+
+    - name: Enable and start Consul
+      systemd:
+        name: consul
+        enabled: true
+        state: started
+
+    # --- Nomad ---
+
+    - name: Create Nomad config directory
+      file:
+        path: /etc/nomad.d
+        state: directory
+        mode: "0750"
+
+    - name: Deploy Nomad base config
+      template:
+        src: templates/nomad/nomad-base.hcl.j2
+        dest: /etc/nomad.d/base.hcl
+        mode: "0640"
+      notify: Reload Nomad
+
+    - name: Deploy Nomad client config
+      template:
+        src: templates/nomad/nomad-client.hcl.j2
+        dest: /etc/nomad.d/client.hcl
+        mode: "0640"
+      notify: Reload Nomad
+
+    - name: Deploy Nomad server config
+      template:
+        src: templates/nomad/nomad-server.hcl.j2
+        dest: /etc/nomad.d/server.hcl
+        mode: "0640"
+      notify: Reload Nomad
+
+    - name: Deploy Nomad systemd service
+      copy:
+        src: templates/nomad/nomad.service
+        dest: /etc/systemd/system/nomad.service
+        mode: "0644"
+      notify:
+        - Reload systemd
+        - Restart Nomad
+
+    - name: Enable and start Nomad
+      systemd:
+        name: nomad
+        enabled: true
+        state: started
+
+    # --- Host volumes for Immich postgres ---
+
+    - name: Create Nomad host volume directory for postgres primary
+      file:
+        path: /opt/nomad/volumes/immich-postgres
+        state: directory
+        owner: "{{ postgres_uid }}"
+        group: "{{ postgres_gid }}"
+        mode: "0750"
+      when: inventory_hostname == 'hermes.internal'
+
+    - name: Create Nomad host volume directory for postgres replica
+      file:
+        path: /opt/nomad/volumes/immich-postgres-replica
+        state: directory
+        owner: "{{ postgres_uid }}"
+        group: "{{ postgres_gid }}"
+        mode: "0750"
+      when: inventory_hostname == 'zeus.internal'
+
+  handlers:
+    - name: Reload systemd
+      systemd:
+        daemon_reload: true
+
+    - name: Reload Consul
+      systemd:
+        name: consul
+        state: reloaded
+
+    - name: Restart Consul
+      systemd:
+        name: consul
+        state: restarted
+
+    - name: Reload Nomad
+      systemd:
+        name: nomad
+        state: reloaded
+
+    - name: Restart Nomad
+      systemd:
+        name: nomad
+        state: restarted
