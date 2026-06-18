@@ -83,7 +83,7 @@ job "photo" {
       driver = "docker"
 
       config {
-        image      = "ghost:6.39.0"
+        image      = "ghost:6.44.1"
         ports      = ["http"]
         entrypoint = ["/local/ghost-with-tinybird.sh"]
       }
@@ -207,7 +207,7 @@ EOF
       driver = "docker"
 
       config {
-        image = "ghost/traffic-analytics:1.0.208"
+        image = "ghost/traffic-analytics:1.0.244"
         ports = ["metrics-http"]
       }
 
