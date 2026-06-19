@@ -1,0 +1,81 @@
+---
+# Installs Tailscale on all nomad nodes and connects them to headscale.
+#
+# Prerequisites:
+#   1. headscale job is running at https://headscale.dbyte.xyz
+#   2. A headscale user and reusable pre-auth key have been created:
+#        nomad alloc exec -job headscale headscale users create distro
+#        nomad alloc exec -job headscale headscale preauthkeys create \
+#          --user distro --reusable --expiration 90d
+#   3. The key is stored in Ansible vault:
+#        ansible-vault encrypt_string '<key>' --name vault_tailscale_authkey \
+#          >> ansible/group_vars/all.yaml
+#
+# After running this playbook, approve the advertised subnet routes in headscale:
+#   nomad alloc exec -job headscale headscale routes list
+#   nomad alloc exec -job headscale headscale routes enable -r <id>
+- name: Install and connect Tailscale
+  hosts: hermes
+  become: true
+
+  vars:
+    tailscale_login_server: https://headscale.dbyte.xyz
+    tailscale_advertise_routes: "192.168.0.0/24"
+
+  tasks:
+    - name: Download Tailscale GPG key
+      get_url:
+        url: https://pkgs.tailscale.com/stable/debian/bookworm.noarmor.gpg
+        dest: /etc/apt/keyrings/tailscale.gpg
+        mode: "0644"
+
+    - name: Add Tailscale apt repository
+      deb822_repository:
+        name: tailscale
+        types: deb
+        uris: https://pkgs.tailscale.com/stable/debian
+        suites: "{{ ansible_distribution_release }}"
+        components: main
+        signed_by: /etc/apt/keyrings/tailscale.gpg
+        state: present
+
+    - name: Install Tailscale
+      apt:
+        name: tailscale
+        state: present
+        update_cache: true
+
+    - name: Enable IP forwarding for subnet routing
+      sysctl:
+        name: "{{ item }}"
+        value: "1"
+        sysctl_set: true
+        state: present
+        reload: true
+      loop:
+        - net.ipv4.ip_forward
+        - net.ipv6.conf.all.forwarding
+
+    - name: Enable and start tailscaled
+      systemd:
+        name: tailscaled
+        enabled: true
+        state: started
+
+    - name: Check Tailscale backend state
+      command: tailscale status --json
+      register: tailscale_status_raw
+      changed_when: false
+      failed_when: false
+
+    - name: Connect to headscale
+      command: >
+        tailscale up
+        --login-server={{ tailscale_login_server }}
+        --authkey={{ vault_tailscale_authkey }}
+        --advertise-routes={{ tailscale_advertise_routes }}
+        --accept-routes
+        --hostname={{ inventory_hostname }}
+      when: >
+        tailscale_status_raw.rc != 0 or
+        (tailscale_status_raw.stdout | from_json).BackendState != 'Running'
