@@ -82,6 +82,18 @@ job "photo" {
       ]
     }
 
+    service {
+      name = "photo-mysql"
+      task = "database"
+      port = "db"
+
+      check {
+        type     = "tcp"
+        interval = "10s"
+        timeout  = "2s"
+      }
+    }
+
     task "website" {
       driver = "docker"
       shutdown_delay = "5s"
@@ -255,8 +267,9 @@ EOF
     }
 
     task "database" {
-      driver       = "docker"
-      kill_timeout = "30s"
+      driver         = "docker"
+      shutdown_delay = "5s"
+      kill_timeout   = "30s"
 
       config {
         image      = "mysql:8.0"
