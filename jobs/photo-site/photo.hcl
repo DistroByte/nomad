@@ -7,6 +7,11 @@ job "photo" {
     version = "1"
   }
 
+  constraint {
+    attribute = "${attr.unique.hostname}"
+    value     = "hermes"
+  }
+
   group "web" {
     count = 1
 
@@ -47,11 +52,9 @@ job "photo" {
     }
 
     volume "photo-db" {
-      type            = "csi"
-      read_only       = false
-      source          = "photo-db"
-      access_mode     = "single-node-writer"
-      attachment_mode = "file-system"
+      type      = "host"
+      source    = "photo-mysql"
+      read_only = false
     }
 
     ephemeral_disk {
@@ -84,7 +87,7 @@ job "photo" {
       shutdown_delay = "5s"
 
       config {
-        image      = "ghost:6.44.1"
+        image      = "ghost:6.45.0"
         force_pull = true
         ports      = ["http"]
         entrypoint = ["/local/ghost-with-tinybird.sh"]

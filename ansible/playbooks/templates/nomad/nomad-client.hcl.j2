@@ -6,6 +6,11 @@ client {
     path      = "/opt/nomad/volumes/immich-postgres"
     read_only = false
   }
+
+  host_volume "photo-mysql" {
+    path      = "/opt/nomad/volumes/photo-mysql"
+    read_only = false
+  }
 {% endif %}
 
 {% if inventory_hostname == 'zeus.internal' %}

@@ -80,7 +80,7 @@
         src: templates/nomad/nomad-client.hcl.j2
         dest: /etc/nomad.d/client.hcl
         mode: "0640"
-      notify: Reload Nomad
+      notify: Restart Nomad
 
     - name: Deploy Nomad server config
       template:
@@ -123,6 +123,15 @@
         group: "{{ postgres_gid }}"
         mode: "0750"
       when: inventory_hostname == 'zeus.internal'
+
+    - name: Create Nomad host volume directory for photo MySQL
+      file:
+        path: /opt/nomad/volumes/photo-mysql
+        state: directory
+        owner: "{{ mysql_uid }}"
+        group: "{{ mysql_gid }}"
+        mode: "0750"
+      when: inventory_hostname == 'hermes.internal'
 
   handlers:
     - name: Reload systemd

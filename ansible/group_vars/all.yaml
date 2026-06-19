@@ -8,6 +8,12 @@ nomad_server_bootstrap_expect: 2
 postgres_uid: 999
 postgres_gid: 999
 
+# UID/GID of the mysql user inside mysql:8.0
+# Verified with: docker run --rm mysql:8.0 id mysql
+# Output: uid=999(mysql) gid=999(mysql) groups=999(mysql)
+mysql_uid: 999
+mysql_gid: 999
+
 # Append the vault-encrypted Consul gossip key below with:
 # ansible-vault encrypt_string 'your-key-here' --name vault_consul_encrypt_key >> ansible/group_vars/all.yaml
 vault_consul_encrypt_key: !vault |
