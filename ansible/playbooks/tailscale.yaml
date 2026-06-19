@@ -17,11 +17,8 @@
 - name: Install and connect Tailscale
   hosts: tailscale
   become: true
-
-  vars:
-    tailscale_login_server: https://headscale.dbyte.xyz
-    tailscale_advertise_routes: ""
-    tailscale_exit_node: false
+  gather_subset:
+    - '!hardware'
 
   tasks:
     - name: Download Tailscale GPG key
@@ -72,4 +69,5 @@
         {{ '--advertise-exit-node' if tailscale_exit_node else '' }}
         --accept-routes
         --hostname={{ inventory_hostname }}
+        --reset
       changed_when: false

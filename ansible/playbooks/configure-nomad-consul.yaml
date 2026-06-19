@@ -11,10 +11,8 @@
 - name: Configure Nomad and Consul
   hosts: nomad
   become: true
-
-  vars:
-    # Retrieve from a running node: consul keyring -list
-    consul_encrypt_key: "{{ vault_consul_encrypt_key }}"
+  gather_subset:
+    - '!hardware'
 
   tasks:
     # --- Consul ---

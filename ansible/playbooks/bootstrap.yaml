@@ -3,13 +3,6 @@
   hosts: all
   gather_facts: false
 
-  vars:
-    users:
-      - name: distro
-        github: DistroByte
-        groups: ["sudo", "nomad", "docker", "consul"]
-        passwordless_sudo: true
-
   tasks:
     - name: Create groups
       become: true
@@ -49,6 +42,8 @@
 
 - name: Configure base system
   hosts: all
+  gather_subset:
+    - '!hardware'
 
   tasks:
     - name: Silence motd
@@ -81,12 +76,8 @@
 
 - name: Install Hashicorp and Docker
   hosts: nomad
-
-  vars:
-    arch_map:
-      x86_64: amd64
-      aarch64: arm64
-      armv7l: armhf
+  gather_subset:
+    - '!hardware'
 
   tasks:
     - name: Create apt keyrings directory

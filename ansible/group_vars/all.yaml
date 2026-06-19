@@ -1,4 +1,10 @@
 ---
+users:
+  - name: distro
+    github: DistroByte
+    groups: ["sudo", "nomad", "docker", "consul"]
+    passwordless_sudo: true
+
 nomad_datacenter_name: dc1
 nomad_server_bootstrap_expect: 2
 
