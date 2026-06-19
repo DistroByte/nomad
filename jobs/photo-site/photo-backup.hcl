@@ -30,6 +30,7 @@ MYSQL_PWD="$MYSQL_PASSWORD" mysqldump \
   -P {{ .Port }} \
   -u "$MYSQL_USER" \
   --single-transaction \
+  --no-tablespaces \
   --routines \
   --triggers \
   "$MYSQL_DATABASE" | \
