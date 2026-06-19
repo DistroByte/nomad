@@ -113,7 +113,7 @@
         owner: "{{ postgres_uid }}"
         group: "{{ postgres_gid }}"
         mode: "0750"
-      when: inventory_hostname == 'hermes.internal'
+      when: inventory_hostname == 'hermes'
 
     - name: Create Nomad host volume directory for postgres replica
       file:
@@ -122,7 +122,7 @@
         owner: "{{ postgres_uid }}"
         group: "{{ postgres_gid }}"
         mode: "0750"
-      when: inventory_hostname == 'zeus.internal'
+      when: inventory_hostname == 'zeus'
 
     - name: Create Nomad host volume directory for photo MySQL
       file:
@@ -131,7 +131,7 @@
         owner: "{{ mysql_uid }}"
         group: "{{ mysql_gid }}"
         mode: "0750"
-      when: inventory_hostname == 'hermes.internal'
+      when: inventory_hostname == 'hermes'
 
   handlers:
     - name: Reload systemd

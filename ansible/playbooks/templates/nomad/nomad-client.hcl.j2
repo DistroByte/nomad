@@ -1,7 +1,7 @@
 client {
   enabled = true
 
-{% if inventory_hostname == 'hermes.internal' %}
+{% if inventory_hostname == 'hermes' %}
   host_volume "immich-postgres" {
     path      = "/opt/nomad/volumes/immich-postgres"
     read_only = false
@@ -13,7 +13,7 @@ client {
   }
 {% endif %}
 
-{% if inventory_hostname == 'zeus.internal' %}
+{% if inventory_hostname == 'zeus' %}
   host_volume "immich-postgres-replica" {
     path      = "/opt/nomad/volumes/immich-postgres-replica"
     read_only = false
