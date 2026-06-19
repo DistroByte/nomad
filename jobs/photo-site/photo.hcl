@@ -81,9 +81,11 @@ job "photo" {
 
     task "website" {
       driver = "docker"
+      shutdown_delay = "5s"
 
       config {
         image      = "ghost:6.44.1"
+        force_pull = true
         ports      = ["http"]
         entrypoint = ["/local/ghost-with-tinybird.sh"]
       }
@@ -205,10 +207,12 @@ EOF
 
     task "analytics" {
       driver = "docker"
+      shutdown_delay = "5s"
 
       config {
-        image = "ghost/traffic-analytics:1.0.244"
-        ports = ["metrics-http"]
+        image      = "ghost/traffic-analytics:1.0.244"
+        force_pull = true
+        ports      = ["metrics-http"]
       }
 
       template {
@@ -248,11 +252,13 @@ EOF
     }
 
     task "database" {
-      driver = "docker"
+      driver       = "docker"
+      kill_timeout = "30s"
 
       config {
-        image = "mysql:8.0"
-        ports = ["db"]
+        image      = "mysql:8.0"
+        force_pull = true
+        ports      = ["db"]
       }
 
       volume_mount {
@@ -263,7 +269,7 @@ EOF
 
       template {
         data        = <<EOF
-MYSQL_ROOT_HOST=172.*.*.*
+MYSQL_ROOT_HOST=127.0.0.1
 MYSQL_ROOT_PASSWORD={{ key "ghost/db/rootpassword" }}
 MYSQL_DATABASE={{ key "ghost/db/database" }}
 MYSQL_USER={{ key "ghost/db/user" }}

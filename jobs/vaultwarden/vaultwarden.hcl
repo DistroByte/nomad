@@ -2,6 +2,10 @@ job "vaultwarden" {
   datacenters = ["dc1"]
   type        = "service"
 
+  update {
+    auto_revert = true
+  }
+
   constraint {
     attribute = "${attr.cpu.arch}"
     value     = "amd64"
@@ -32,14 +36,23 @@ job "vaultwarden" {
         "traefik.enable=true",
         "traefik.http.routers.vaultwarden.rule=Host(`vault.dbyte.xyz`)",
       ]
+
+      check {
+        type     = "http"
+        path     = "/alive"
+        interval = "10s"
+        timeout  = "2s"
+      }
     }
 
     task "vaultwarden" {
       driver = "docker"
+      shutdown_delay = "5s"
 
       config {
-        image = "vaultwarden/server:1.35.4"
-        ports = ["http"]
+        image      = "vaultwarden/server:1.35.4"
+        force_pull = true
+        ports      = ["http"]
       }
 
       volume_mount {

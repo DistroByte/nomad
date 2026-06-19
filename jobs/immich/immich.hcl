@@ -2,6 +2,10 @@ job "immich" {
   datacenters = ["dc1"]
   type        = "service"
 
+  update {
+    auto_revert = true
+  }
+
   group "api-server" {
     network {
       port "api" {
@@ -31,6 +35,7 @@ job "immich" {
     # The main immich API server
     task "server" {
       driver = "docker"
+      shutdown_delay = "5s"
 
       config {
         image = "ghcr.io/immich-app/immich-server:release"
@@ -55,7 +60,7 @@ job "immich" {
       template {
         destination = "secrets/variables.env"
         env         = true
-        perms       = 400
+        perms       = "400"
         data        = <<EOH
 {{- range service "immich-postgres" }}
 DB_URL=postgres://{{ key "immich/db/user" }}:{{ key "immich/db/password" }}@{{ .Address }}:{{ .Port }}/immich
@@ -98,7 +103,7 @@ EOH
 
   // --- Immich Worker ---
   group "worker" {
-    count = "2"
+    count = 2
     constraint {
       distinct_hosts = true
     }
@@ -124,6 +129,7 @@ EOH
     # task worker, doing all the processing async
     task "server" {
       driver = "docker"
+      shutdown_delay = "5s"
 
       config {
         image = "ghcr.io/immich-app/immich-server:release"
@@ -153,7 +159,7 @@ EOH
       template {
         destination = "secrets/variables.env"
         env         = true
-        perms       = 400
+        perms       = "400"
         data        = <<EOH
 {{- range service "immich-postgres" }}
 DB_URL=postgres://{{ key "immich/db/user" }}:{{ key "immich/db/password" }}@{{ .Address }}:{{ .Port }}/immich
@@ -196,7 +202,7 @@ EOH
 
   // --- Immich Machine Learning ---
   group "machine-learning" {
-    count = "1"
+    count = 1
     constraint {
       distinct_hosts = true
     }
@@ -226,6 +232,7 @@ EOH
 
     task "server" {
       driver = "docker"
+      shutdown_delay = "5s"
 
       config {
         image = "ghcr.io/immich-app/immich-machine-learning:release"
@@ -312,6 +319,8 @@ EOH
 
     task "postgres" {
       driver = "docker"
+      shutdown_delay = "5s"
+      kill_timeout   = "30s"
 
       # backs up the Postgres database and removes all files in the backup folder which are older than 3 days.
       action "backup-postgres" {
@@ -344,7 +353,7 @@ EOF
       template {
         destination = "secrets/variables.env"
         env         = true
-        perms       = 400
+        perms       = "400"
         data        = <<EOH
 POSTGRES_PASSWORD    = {{ key "immich/db/password" }}
 POSTGRES_USER        = {{ key "immich/db/user" }}
@@ -434,6 +443,8 @@ EOH
     # Valkey cache, used as an event queue to schedule jobs
     task "valkey" {
       driver = "docker"
+      shutdown_delay = "5s"
+      kill_timeout   = "10s"
 
       config {
         image = "valkey/valkey:9"
@@ -554,7 +565,7 @@ EOH
       template {
         destination = "secrets/replica.env"
         env         = true
-        perms       = 400
+        perms       = "400"
         data        = <<EOH
 PGPASSWORD = {{ key "immich/db/replicator_password" }}
 EOH
@@ -573,6 +584,8 @@ EOH
 
     task "postgres" {
       driver = "docker"
+      shutdown_delay = "5s"
+      kill_timeout   = "30s"
 
       config {
         image      = "ghcr.io/immich-app/postgres:14-vectorchord0.4.3"
@@ -591,7 +604,7 @@ EOH
       template {
         destination = "secrets/variables.env"
         env         = true
-        perms       = 400
+        perms       = "400"
         data        = <<EOH
 POSTGRES_USER     = {{ key "immich/db/user" }}
 POSTGRES_PASSWORD = {{ key "immich/db/password" }}

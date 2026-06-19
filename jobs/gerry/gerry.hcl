@@ -2,6 +2,10 @@ job "gerry" {
   datacenters = ["dc1"]
   type        = "service"
 
+  update {
+    auto_revert = true
+  }
+
   constraint {
     attribute = "${attr.cpu.arch}"
     value     = "amd64"
@@ -41,10 +45,12 @@ job "gerry" {
 
     task "gerry" {
       driver = "docker"
+      shutdown_delay = "5s"
 
       config {
-        image = "ghcr.io/distrobyte/gerry:0.6.4"
-        ports = ["http"]
+        image      = "ghcr.io/distrobyte/gerry:0.6.4"
+        force_pull = true
+        ports      = ["http"]
       }
 
       volume_mount {

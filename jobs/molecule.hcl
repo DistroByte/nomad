@@ -43,10 +43,12 @@ job "molecule" {
 
     task "molecule" {
       driver = "docker"
+      shutdown_delay = "5s"
 
       config {
-        image = "ghcr.io/distrobyte/molecule:0.9.5"
-        ports = ["http"]
+        image      = "ghcr.io/distrobyte/molecule:0.9.5"
+        force_pull = true
+        ports      = ["http"]
 
         mount {
           type   = "bind"

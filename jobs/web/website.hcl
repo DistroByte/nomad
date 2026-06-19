@@ -2,6 +2,10 @@ job "website" {
   datacenters = ["dc1"]
   type        = "service"
 
+  update {
+    auto_revert = true
+  }
+
   group "web" {
     network {
       port "http" {
@@ -29,6 +33,7 @@ job "website" {
 
     task "website" {
       driver = "docker"
+      shutdown_delay = "5s"
 
       action "update-site" {
         command = "/bin/bash"
@@ -50,8 +55,9 @@ EOF
       }
 
       config {
-        image = "nginx"
-        ports = ["http"]
+        image      = "nginx:latest"
+        force_pull = true
+        ports      = ["http"]
 
         mount {
           type     = "bind"
@@ -61,6 +67,7 @@ EOF
       }
 
       resources {
+        cpu    = 100
         memory = 50
       }
     }

@@ -2,6 +2,10 @@ job "mediashare" {
   datacenters = ["dc1"]
   type        = "service"
 
+  update {
+    auto_revert = true
+  }
+
   group "web" {
     network {
       port "http" {
@@ -32,10 +36,12 @@ job "mediashare" {
 
     task "mediashare" {
       driver = "docker"
+      shutdown_delay = "5s"
 
       config {
-        image = "ghcr.io/distrobyte/nginx-file-browser:share"
-        ports = ["http"]
+        image      = "ghcr.io/distrobyte/nginx-file-browser:share"
+        force_pull = true
+        ports      = ["http"]
 
         mount {
           type     = "bind"
@@ -53,6 +59,7 @@ job "mediashare" {
       }
 
       resources {
+        cpu    = 100
         memory = 50
       }
     }

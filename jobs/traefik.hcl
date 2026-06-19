@@ -2,6 +2,10 @@ job "traefik" {
   datacenters = ["dc1"]
   type        = "service"
 
+  update {
+    auto_revert = true
+  }
+
   constraint {
     attribute = "${attr.unique.hostname}"
     value     = "hermes"
@@ -30,12 +34,20 @@ job "traefik" {
     service {
       name = "traefik-http"
       port = "admin"
+
+      check {
+        type     = "tcp"
+        interval = "10s"
+        timeout  = "2s"
+      }
     }
 
     task "traefik" {
       driver = "docker"
+      shutdown_delay = "5s"
       config {
         image        = "traefik:latest"
+        force_pull   = true
         network_mode = "host"
 
         volumes = [
@@ -46,7 +58,7 @@ job "traefik" {
 
       template {
         data        = <<EOF
-CLOUDFLARE_API_KEY={{ key "cloudflare/key" }} 
+CLOUDFLARE_API_KEY={{ key "cloudflare/key" }}
 CLOUDFLARE_EMAIL={{ key "cloudflare/email" }}
 NS1_API_KEY={{ key "ns1/key" }}
 EOF

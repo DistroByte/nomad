@@ -2,6 +2,10 @@ job "paperless" {
   datacenters = ["dc1"]
   type        = "service"
 
+  update {
+    auto_revert = true
+  }
+
   group "paperless-web" {
     network {
       port "http" {
@@ -40,6 +44,7 @@ job "paperless" {
 
     task "paperless-webserver" {
       driver = "docker"
+      shutdown_delay = "5s"
 
       env {
         PAPERLESS_REDIS = "redis://${NOMAD_ADDR_redis}"
@@ -47,8 +52,9 @@ job "paperless" {
       }
 
       config {
-        image = "ghcr.io/paperless-ngx/paperless-ngx:2.20.13"
-        ports = ["http"]
+        image      = "ghcr.io/paperless-ngx/paperless-ngx:2.20.13"
+        force_pull = true
+        ports      = ["http"]
       }
 
       volume_mount {
@@ -87,8 +93,9 @@ EOH
       driver = "docker"
 
       config {
-        image = "docker.io/library/redis:7"
-        ports = ["redis"]
+        image      = "docker.io/library/redis:7"
+        force_pull = true
+        ports      = ["redis"]
       }
 
       resources {

@@ -39,7 +39,7 @@ EOH
       template {
         destination = "secrets/pg.env"
         env         = true
-        perms       = 400
+        perms       = "400"
         data        = <<EOH
 PGPASSWORD = {{ key "immich/db/password" }}
 EOH

@@ -2,6 +2,10 @@ job "nicecocks" {
   datacenters = ["dc1"]
   type        = "service"
 
+  update {
+    auto_revert = true
+  }
+
   group "web" {
     network {
       port "http" {
@@ -29,10 +33,12 @@ job "nicecocks" {
 
     task "nicecocks" {
       driver = "docker"
+      shutdown_delay = "5s"
 
       config {
-        image = "nginx"
-        ports = ["http"]
+        image      = "nginx:latest"
+        force_pull = true
+        ports      = ["http"]
 
         mount {
           type     = "bind"
@@ -43,6 +49,7 @@ job "nicecocks" {
       }
 
       resources {
+        cpu    = 100
         memory = 50
       }
     }

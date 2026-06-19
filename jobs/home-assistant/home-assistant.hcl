@@ -2,6 +2,10 @@ job "home-assistant" {
   datacenters = ["dc1"]
   type        = "service"
 
+  update {
+    auto_revert = true
+  }
+
   constraint {
     attribute = "${attr.cpu.arch}"
     value     = "amd64"
@@ -50,8 +54,10 @@ job "home-assistant" {
 
     task "hass" {
       driver = "docker"
+      shutdown_delay = "5s"
       config {
-        image        = "homeassistant/home-assistant"
+        image        = "homeassistant/home-assistant:latest"
+        force_pull   = true
         network_mode = "host"
         privileged   = true
       }
@@ -88,8 +94,10 @@ job "home-assistant" {
 
     task "mqtt" {
       driver = "docker"
+      shutdown_delay = "5s"
       config {
-        image        = "eclipse-mosquitto"
+        image        = "eclipse-mosquitto:latest"
+        force_pull   = true
         network_mode = "host"
         command      = "mosquitto"
         args         = ["-c", "/mosquitto-no-auth.conf"]
@@ -119,7 +127,8 @@ job "home-assistant" {
     task "zigbee2mqtt" {
       driver = "docker"
       config {
-        image      = "koenkk/zigbee2mqtt"
+        image      = "koenkk/zigbee2mqtt:latest"
+        force_pull = true
         privileged = true
         ports      = ["z2mhttp"]
 

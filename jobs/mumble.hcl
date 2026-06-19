@@ -2,6 +2,10 @@ job "mumble" {
   datacenters = ["dc1"]
   type        = "service"
 
+  update {
+    auto_revert = true
+  }
+
   constraint {
     attribute = "${attr.cpu.arch}"
     value     = "amd64"
@@ -29,10 +33,12 @@ job "mumble" {
 
     task "mumble" {
       driver = "docker"
+      shutdown_delay = "5s"
 
       config {
-        image = "mumblevoip/mumble-server:latest"
-        ports = ["voice-udp"]
+        image      = "mumblevoip/mumble-server:latest"
+        force_pull = true
+        ports      = ["voice-udp"]
 
         hostname = "mumble.dbyte.xyz"
         #hostname = "hermes.internal"

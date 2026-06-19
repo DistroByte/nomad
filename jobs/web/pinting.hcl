@@ -2,6 +2,10 @@ job "pinting" {
   datacenters = ["dc1"]
   type        = "service"
 
+  update {
+    auto_revert = true
+  }
+
   group "web" {
     network {
       port "http" {
@@ -29,10 +33,12 @@ job "pinting" {
 
     task "pinting" {
       driver = "docker"
+      shutdown_delay = "5s"
 
       config {
-        image = "nginx"
-        ports = ["http"]
+        image      = "nginx:latest"
+        force_pull = true
+        ports      = ["http"]
 
         mount {
           type     = "bind"
@@ -43,6 +49,7 @@ job "pinting" {
       }
 
       resources {
+        cpu    = 100
         memory = 50
       }
     }

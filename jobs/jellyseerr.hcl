@@ -2,6 +2,10 @@ job "jellyseerr" {
   datacenters = ["dc1"]
   type        = "service"
 
+  update {
+    auto_revert = true
+  }
+
   group "web" {
     network {
       port "http" {
@@ -28,11 +32,13 @@ job "jellyseerr" {
 
     task "jellyseerr" {
       driver = "docker"
+      shutdown_delay = "5s"
 
       config {
-        image = "ghcr.io/seerr-team/seerr:latest"
-        ports = ["http"]
-        init  = true
+        image      = "ghcr.io/seerr-team/seerr:latest"
+        force_pull = true
+        ports      = ["http"]
+        init       = true
 
         mount {
           type     = "bind"

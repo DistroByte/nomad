@@ -2,6 +2,10 @@ job "crazybittabiz" {
   datacenters = ["dc1"]
   type        = "service"
 
+  update {
+    auto_revert = true
+  }
+
   group "web" {
     network {
       port "http" {
@@ -28,10 +32,12 @@ job "crazybittabiz" {
 
     task "crazybittabiz" {
       driver = "docker"
+      shutdown_delay = "5s"
 
       config {
-        image = "nginx"
-        ports = ["http"]
+        image      = "nginx:latest"
+        force_pull = true
+        ports      = ["http"]
 
         mount {
           type     = "bind"
@@ -42,6 +48,7 @@ job "crazybittabiz" {
       }
 
       resources {
+        cpu    = 100
         memory = 50
       }
     }
