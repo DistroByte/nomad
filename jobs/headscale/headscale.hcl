@@ -35,6 +35,7 @@ job "headscale" {
       tags = [
         "traefik.enable=true",
         "traefik.http.routers.headscale.rule=Host(`headscale.dbyte.xyz`)",
+        "molecule.skip=true"
       ]
 
       check {
