@@ -29,9 +29,8 @@ job "headscale" {
     }
 
     service {
-      name           = "headscale"
-      port           = "http"
-      shutdown_delay = "5s"
+      name = "headscale"
+      port = "http"
 
       tags = [
         "traefik.enable=true",
