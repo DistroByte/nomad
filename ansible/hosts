@@ -1,9 +1,9 @@
-zeus.internal
-hermes.internal
+zeus
+hermes
 
 [nomad]
-zeus.internal
-hermes.internal
+zeus
+hermes
 
 [all:vars]
 ansible_user=distro
