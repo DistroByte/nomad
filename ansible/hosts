@@ -5,5 +5,8 @@ hermes
 zeus
 hermes
 
+[tailscale]
+hermes
+
 [all:vars]
 ansible_user=distro

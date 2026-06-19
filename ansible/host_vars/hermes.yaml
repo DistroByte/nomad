@@ -1,0 +1,3 @@
+---
+tailscale_advertise_routes: "192.168.0.0/24"
+tailscale_exit_node: true
