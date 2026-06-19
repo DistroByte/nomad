@@ -1,7 +1,8 @@
-id        = "vaultwarden"
-name      = "vaultwarden"
-type      = "csi"
-plugin_id = "synology"
+id          = "vaultwarden"
+name        = "vaultwarden"
+type        = "csi"
+external_id = "ebdd4c83-9731-425e-be47-4754ea4d61ad"
+plugin_id   = "synology"
 
 capacity_min = "10GiB"
 capacity_max = "15GiB"

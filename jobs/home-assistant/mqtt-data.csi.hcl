@@ -1,7 +1,8 @@
-id        = "mqtt"
-name      = "mqtt"
-type      = "csi"
-plugin_id = "synology"
+id          = "mqtt"
+name        = "mqtt"
+type        = "csi"
+external_id = "29656f35-0a80-4856-9301-afcd95cdf825"
+plugin_id   = "synology"
 
 capacity_min = "5GiB"
 capacity_max = "10GiB"

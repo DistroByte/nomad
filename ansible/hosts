@@ -1,6 +1,6 @@
 [nomad]
-zeus
-hermes
+zeus   ansible_host=192.168.0.3
+hermes ansible_host=192.168.0.4
 
 [tailscale]
 hermes

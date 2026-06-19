@@ -1,7 +1,8 @@
-id        = "headscale"
-name      = "headscale"
-type      = "csi"
-plugin_id = "synology"
+id          = "headscale"
+name        = "headscale"
+type        = "csi"
+external_id = "3f42c9c2-a361-4c1c-af16-ee85b940e69a"
+plugin_id   = "synology"
 
 capacity_min = "1GiB"
 capacity_max = "2GiB"

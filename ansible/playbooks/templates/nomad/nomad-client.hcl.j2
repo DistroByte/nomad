@@ -35,3 +35,14 @@ plugin "docker" {
     }
   }
 }
+
+{% if inventory_hostname == 'zeus' %}
+plugin_dir = "/opt/nomad/plugins"
+
+plugin "usb" {
+  config {
+    enabled            = true
+    fingerprint_period = "5s"
+  }
+}
+{% endif %}

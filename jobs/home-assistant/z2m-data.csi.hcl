@@ -1,7 +1,8 @@
-id        = "z2m"
-name      = "z2m"
-type      = "csi"
-plugin_id = "synology"
+id          = "z2m"
+name        = "z2m"
+type        = "csi"
+external_id = "1da19d28-b7c1-455b-83df-b30ea616c673"
+plugin_id   = "synology"
 
 capacity_min = "4GiB"
 capacity_max = "6GiB"

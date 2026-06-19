@@ -17,6 +17,14 @@
   tasks:
     # --- Consul ---
 
+    - name: Create Consul data directory
+      ansible.builtin.file:
+        path: /opt/consul
+        state: directory
+        owner: consul
+        group: consul
+        mode: "0750"
+
     - name: Create Consul config directory
       ansible.builtin.file:
         path: /etc/consul.d
@@ -24,6 +32,101 @@
         owner: consul
         group: consul
         mode: "0750"
+
+    - name: Create Consul TLS directory
+      ansible.builtin.file:
+        path: /etc/consul.d/tls
+        state: directory
+        owner: consul
+        group: consul
+        mode: "0750"
+
+    - name: Remove unrecognised files from Consul config directory
+      ansible.builtin.find:
+        paths: /etc/consul.d
+        file_type: file
+        excludes:
+          - consul.hcl
+          - consul-server.hcl
+      register: consul_extra_files
+
+    - name: Delete unrecognised Consul config files
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ consul_extra_files.files }}"
+      notify: Reload Consul
+
+    # --- Consul TLS ---
+    # CA is generated once on the first nomad node and distributed to all.
+    # CA cert is valid for 10 years; server cert for 1 year — re-run to rotate.
+
+    - name: Generate Consul CA on primary node
+      ansible.builtin.command:
+        cmd: consul tls ca create
+        chdir: /etc/consul.d/tls
+        creates: /etc/consul.d/tls/consul-agent-ca.pem
+      run_once: true
+      delegate_to: "{{ groups.nomad[0] }}"
+
+    - name: Set ownership on Consul CA files
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        owner: consul
+        group: consul
+        mode: "{{ item.mode }}"
+      loop:
+        - { path: /etc/consul.d/tls/consul-agent-ca.pem, mode: "0644" }
+        - { path: /etc/consul.d/tls/consul-agent-ca-key.pem, mode: "0600" }
+      run_once: true
+      delegate_to: "{{ groups.nomad[0] }}"
+
+    - name: Generate Consul server certificate on primary node
+      ansible.builtin.command:
+        cmd: consul tls cert create -server -dc {{ nomad_datacenter_name }}
+        chdir: /etc/consul.d/tls
+        creates: /etc/consul.d/tls/{{ nomad_datacenter_name }}-server-consul-0.pem
+      run_once: true
+      delegate_to: "{{ groups.nomad[0] }}"
+
+    - name: Set ownership on Consul server cert files
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        owner: consul
+        group: consul
+        mode: "{{ item.mode }}"
+      loop:
+        - { path: "/etc/consul.d/tls/{{ nomad_datacenter_name }}-server-consul-0.pem", mode: "0644" }
+        - { path: "/etc/consul.d/tls/{{ nomad_datacenter_name }}-server-consul-0-key.pem", mode: "0600" }
+      run_once: true
+      delegate_to: "{{ groups.nomad[0] }}"
+
+    - name: Fetch Consul TLS files from primary node
+      ansible.builtin.fetch:
+        src: "/etc/consul.d/tls/{{ item }}"
+        dest: "/tmp/consul-tls/{{ item }}"
+        flat: true
+      loop:
+        - consul-agent-ca.pem
+        - "{{ nomad_datacenter_name }}-server-consul-0.pem"
+        - "{{ nomad_datacenter_name }}-server-consul-0-key.pem"
+      run_once: true
+      delegate_to: "{{ groups.nomad[0] }}"
+      no_log: true
+
+    - name: Deploy Consul TLS files to all servers
+      ansible.builtin.copy:
+        src: "/tmp/consul-tls/{{ item.file }}"
+        dest: "/etc/consul.d/tls/{{ item.file }}"
+        owner: consul
+        group: consul
+        mode: "{{ item.mode }}"
+      loop:
+        - { file: consul-agent-ca.pem, mode: "0644" }
+        - { file: "{{ nomad_datacenter_name }}-server-consul-0.pem", mode: "0644" }
+        - { file: "{{ nomad_datacenter_name }}-server-consul-0-key.pem", mode: "0600" }
+      no_log: true
+      notify: Restart Consul
 
     - name: Deploy Consul base config
       ansible.builtin.template:
@@ -65,6 +168,23 @@
         path: /etc/nomad.d
         state: directory
         mode: "0750"
+
+    - name: Remove unrecognised files from Nomad config directory
+      ansible.builtin.find:
+        paths: /etc/nomad.d
+        file_type: file
+        excludes:
+          - base.hcl
+          - client.hcl
+          - server.hcl
+      register: nomad_extra_files
+
+    - name: Delete unrecognised Nomad config files
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ nomad_extra_files.files }}"
+      notify: Restart Nomad
 
     - name: Deploy Nomad base config
       ansible.builtin.template:

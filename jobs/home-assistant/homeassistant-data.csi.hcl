@@ -1,7 +1,8 @@
-id        = "homeassistant"
-name      = "homeassistant"
-type      = "csi"
-plugin_id = "synology"
+id          = "homeassistant"
+name        = "homeassistant"
+type        = "csi"
+external_id = "354bd5f9-c03c-4b21-aa4c-0150616d57e2"
+plugin_id   = "synology"
 
 capacity_min = "12GiB"
 capacity_max = "15GiB"

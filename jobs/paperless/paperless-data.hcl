@@ -1,7 +1,8 @@
-id        = "paperless"
-name      = "paperless"
-type      = "csi"
-plugin_id = "synology"
+id          = "paperless"
+name        = "paperless"
+type        = "csi"
+external_id = "e122c2c8-7346-4372-b43b-881b0f463920"
+plugin_id   = "synology"
 
 capacity_min = "12GiB"
 capacity_max = "15GiB"
