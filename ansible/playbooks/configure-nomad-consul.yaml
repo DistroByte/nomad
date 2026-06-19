@@ -18,7 +18,7 @@
     # --- Consul ---
 
     - name: Create Consul config directory
-      file:
+      ansible.builtin.file:
         path: /etc/consul.d
         state: directory
         owner: consul
@@ -26,7 +26,7 @@
         mode: "0750"
 
     - name: Deploy Consul base config
-      template:
+      ansible.builtin.template:
         src: templates/consul/consul.hcl.j2
         dest: /etc/consul.d/consul.hcl
         owner: consul
@@ -35,7 +35,7 @@
       notify: Reload Consul
 
     - name: Deploy Consul server config
-      template:
+      ansible.builtin.template:
         src: templates/consul/consul-server.hcl.j2
         dest: /etc/consul.d/consul-server.hcl
         owner: consul
@@ -44,7 +44,7 @@
       notify: Reload Consul
 
     - name: Deploy Consul systemd service
-      copy:
+      ansible.builtin.copy:
         src: templates/consul/consul.service
         dest: /etc/systemd/system/consul.service
         mode: "0644"
@@ -53,7 +53,7 @@
         - Restart Consul
 
     - name: Enable and start Consul
-      systemd:
+      ansible.builtin.systemd:
         name: consul
         enabled: true
         state: started
@@ -61,34 +61,34 @@
     # --- Nomad ---
 
     - name: Create Nomad config directory
-      file:
+      ansible.builtin.file:
         path: /etc/nomad.d
         state: directory
         mode: "0750"
 
     - name: Deploy Nomad base config
-      template:
+      ansible.builtin.template:
         src: templates/nomad/nomad-base.hcl.j2
         dest: /etc/nomad.d/base.hcl
         mode: "0640"
       notify: Reload Nomad
 
     - name: Deploy Nomad client config
-      template:
+      ansible.builtin.template:
         src: templates/nomad/nomad-client.hcl.j2
         dest: /etc/nomad.d/client.hcl
         mode: "0640"
       notify: Restart Nomad
 
     - name: Deploy Nomad server config
-      template:
+      ansible.builtin.template:
         src: templates/nomad/nomad-server.hcl.j2
         dest: /etc/nomad.d/server.hcl
         mode: "0640"
       notify: Reload Nomad
 
     - name: Deploy Nomad systemd service
-      copy:
+      ansible.builtin.copy:
         src: templates/nomad/nomad.service
         dest: /etc/systemd/system/nomad.service
         mode: "0644"
@@ -97,7 +97,7 @@
         - Restart Nomad
 
     - name: Enable and start Nomad
-      systemd:
+      ansible.builtin.systemd:
         name: nomad
         enabled: true
         state: started
@@ -105,7 +105,7 @@
     # --- Host volumes for Immich postgres ---
 
     - name: Create Nomad host volume directory for postgres primary
-      file:
+      ansible.builtin.file:
         path: /opt/nomad/volumes/immich-postgres
         state: directory
         owner: "{{ postgres_uid }}"
@@ -114,7 +114,7 @@
       when: inventory_hostname == 'hermes'
 
     - name: Create Nomad host volume directory for postgres replica
-      file:
+      ansible.builtin.file:
         path: /opt/nomad/volumes/immich-postgres-replica
         state: directory
         owner: "{{ postgres_uid }}"
@@ -123,7 +123,7 @@
       when: inventory_hostname == 'zeus'
 
     - name: Create Nomad host volume directory for photo MySQL
-      file:
+      ansible.builtin.file:
         path: /opt/nomad/volumes/photo-mysql
         state: directory
         owner: "{{ mysql_uid }}"
@@ -133,25 +133,25 @@
 
   handlers:
     - name: Reload systemd
-      systemd:
+      ansible.builtin.systemd:
         daemon_reload: true
 
     - name: Reload Consul
-      systemd:
+      ansible.builtin.systemd:
         name: consul
         state: reloaded
 
     - name: Restart Consul
-      systemd:
+      ansible.builtin.systemd:
         name: consul
         state: restarted
 
     - name: Reload Nomad
-      systemd:
+      ansible.builtin.systemd:
         name: nomad
         state: reloaded
 
     - name: Restart Nomad
-      systemd:
+      ansible.builtin.systemd:
         name: nomad
         state: restarted

@@ -6,25 +6,25 @@
   tasks:
     - name: Create groups
       become: true
-      group:
+      ansible.builtin.group:
         name: "{{ item }}"
         state: present
       loop: "{{ users | map(attribute='groups') | flatten | unique }}"
 
     - name: Add users to groups
       become: true
-      user:
+      ansible.builtin.user:
         name: "{{ item.name }}"
         groups: "{{ item.groups }}"
-        append: yes
+        append: true
       loop: "{{ users }}"
 
     - name: Add ssh key from Github account
       become: true
-      authorized_key:
+      ansible.posix.authorized_key:
         user: "{{ item.name }}"
         key: "https://github.com/{{ item.github }}.keys"
-        manage_dir: yes
+        manage_dir: true
         state: present
         exclusive: false
       loop: "{{ users }}"
@@ -32,7 +32,7 @@
 
     - name: Set passwordless sudo
       become: true
-      lineinfile:
+      ansible.builtin.lineinfile:
         dest: /etc/sudoers
         line: "{{ item.name }} ALL=(ALL) NOPASSWD: ALL"
         state: present
@@ -48,27 +48,28 @@
   tasks:
     - name: Silence motd
       become: true
-      file:
+      ansible.builtin.file:
         path: /etc/update-motd.d/*
-        mode: 0400
-        recurse: yes
+        mode: "0400"
+        recurse: true
 
     - name: Get figlet hostname
-      shell: figlet -f slant {{ ansible_facts['hostname'] }}
+      ansible.builtin.command: figlet -f slant {{ ansible_facts['hostname'] }}
       register: figlet_hostname
       changed_when: false
       delegate_to: localhost
 
     - name: Set /etc/motd to a static message
       become: true
-      copy:
+      ansible.builtin.copy:
         dest: /etc/motd
         content: |
           {{ figlet_hostname.stdout }}
+        mode: "0644"
 
     - name: Modify the /boot/cmdline.txt file to allow for cgroup stats
       become: true
-      lineinfile:
+      ansible.builtin.lineinfile:
         path: /boot/config.txt
         regexp: "rootwait$"
         line: '\1 cgroup_enable=cpuset cgroup_enable=memory cgroup_memory=1'
@@ -82,14 +83,14 @@
   tasks:
     - name: Create apt keyrings directory
       become: true
-      file:
+      ansible.builtin.file:
         path: /etc/apt/keyrings
         state: directory
         mode: "0755"
 
     - name: Ensure required packages are installed
       become: true
-      apt:
+      ansible.builtin.apt:
         name: ["ca-certificates", "gnupg", "curl"]
         state: present
         update_cache: true
@@ -98,20 +99,21 @@
 
     - name: Download Hashicorp GPG key
       become: true
-      get_url:
+      ansible.builtin.get_url:
         url: https://apt.releases.hashicorp.com/gpg
         dest: /tmp/hashicorp.gpg
         mode: "0644"
 
     - name: Dearmor Hashicorp GPG key
       become: true
-      shell:
+      ansible.builtin.command:
         cmd: gpg --batch --yes --dearmor -o /etc/apt/keyrings/hashicorp.gpg /tmp/hashicorp.gpg
         creates: /etc/apt/keyrings/hashicorp.gpg
+      changed_when: false
 
     - name: Add Hashicorp apt repository
       become: true
-      deb822_repository:
+      ansible.builtin.deb822_repository:
         name: hashicorp
         types: deb
         uris: https://apt.releases.hashicorp.com
@@ -123,7 +125,7 @@
 
     - name: Install Nomad and Consul
       become: true
-      apt:
+      ansible.builtin.apt:
         name: ["nomad", "consul"]
         state: present
         update_cache: true
@@ -132,26 +134,27 @@
 
     - name: Download Docker GPG key
       become: true
-      get_url:
+      ansible.builtin.get_url:
         url: https://download.docker.com/linux/debian/gpg
         dest: /tmp/docker.gpg
         mode: "0644"
 
     - name: Dearmor Docker GPG key
       become: true
-      shell:
+      ansible.builtin.command:
         cmd: gpg --batch --yes --dearmor -o /etc/apt/keyrings/docker.gpg /tmp/docker.gpg
         creates: /etc/apt/keyrings/docker.gpg
+      changed_when: false
 
     - name: Set correct permissions on Docker GPG key
       become: true
-      file:
+      ansible.builtin.file:
         path: /etc/apt/keyrings/docker.gpg
         mode: "0644"
 
     - name: Add Docker apt repository
       become: true
-      deb822_repository:
+      ansible.builtin.deb822_repository:
         name: docker
         types: deb
         uris: https://download.docker.com/linux/debian
@@ -163,7 +166,7 @@
 
     - name: Install Docker packages
       become: true
-      apt:
+      ansible.builtin.apt:
         name: ["docker-ce", "docker-ce-cli", "containerd.io", "docker-compose"]
         state: present
         update_cache: true

@@ -6,14 +6,14 @@
 #   2. A headscale user and reusable pre-auth key have been created:
 #        nomad alloc exec -job headscale headscale users create distro
 #        nomad alloc exec -job headscale headscale preauthkeys create \
-#          --user distro --reusable --expiration 90d
+#          --user 1 --reusable --expiration 90d
 #   3. The key is stored in Ansible vault:
 #        ansible-vault encrypt_string '<key>' --name vault_tailscale_authkey \
 #          >> ansible/group_vars/all.yaml
 #
 # After running this playbook, approve the advertised subnet routes in headscale:
-#   nomad alloc exec -job headscale headscale routes list
-#   nomad alloc exec -job headscale headscale routes enable -r <id>
+#   nomad alloc exec -job headscale headscale nodes list-routes --identifier <id>
+#   nomad alloc exec -job headscale headscale nodes approve-routes --identifier <id> --routes 192.168.0.0/24,0.0.0.0/0,::/0
 - name: Install and connect Tailscale
   hosts: tailscale
   become: true
@@ -22,13 +22,13 @@
 
   tasks:
     - name: Download Tailscale GPG key
-      get_url:
+      ansible.builtin.get_url:
         url: https://pkgs.tailscale.com/stable/debian/bookworm.noarmor.gpg
         dest: /etc/apt/keyrings/tailscale.gpg
         mode: "0644"
 
     - name: Add Tailscale apt repository
-      deb822_repository:
+      ansible.builtin.deb822_repository:
         name: tailscale
         types: deb
         uris: https://pkgs.tailscale.com/stable/debian
@@ -38,13 +38,13 @@
         state: present
 
     - name: Install Tailscale
-      apt:
+      ansible.builtin.apt:
         name: tailscale
         state: present
         update_cache: true
 
     - name: Enable IP forwarding for subnet routing
-      sysctl:
+      ansible.posix.sysctl:
         name: "{{ item }}"
         value: "1"
         sysctl_set: true
@@ -55,13 +55,13 @@
         - net.ipv6.conf.all.forwarding
 
     - name: Enable and start tailscaled
-      systemd:
+      ansible.builtin.systemd:
         name: tailscaled
         enabled: true
         state: started
 
     - name: Apply Tailscale configuration
-      command: >
+      ansible.builtin.command: >
         tailscale up
         --login-server={{ tailscale_login_server }}
         --authkey={{ vault_tailscale_authkey }}

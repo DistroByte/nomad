@@ -33,51 +33,60 @@
   tasks:
     - name: Mark Hashicorp products as held back
       become: true
-      shell: "apt-mark hold nomad consul vault"
+      ansible.builtin.command: "apt-mark hold nomad consul vault"
+      register: hold_result
+      changed_when: "'set on hold.' in hold_result.stdout"
       when: not update_hashicorp | bool and upgrade | bool
 
     - name: Apt update and apt upgrade
       become: true
-      apt:
-        upgrade: yes
-        autoclean: yes
-        autoremove: yes
-        update_cache: yes
+      ansible.builtin.apt:
+        upgrade: true
+        autoclean: true
+        autoremove: true
+        update_cache: true
       when: upgrade | bool
 
     - name: Get installed and updated packages
       become: true
-      shell: 'grep -E "^$(date +%Y-%m-%d).+ (install|upgrade) " /var/log/dpkg.log | cut -d " " -f 3-5'
+      ansible.builtin.shell:
+        cmd: set -o pipefail && grep -E "^$(date +%Y-%m-%d).+ (install|upgrade) " /var/log/dpkg.log | cut -d " " -f 3-5
+        executable: /bin/bash
       register: result
+      changed_when: false
       when: upgrade | bool
 
     - name: Print result
-      debug:
+      ansible.builtin.debug:
         msg: "{{ result.stdout_lines }}"
       when: upgrade | bool
 
     - name: Remove Hashicorp products from hold
       become: true
-      shell: "apt-mark unhold nomad consul vault"
+      ansible.builtin.command: "apt-mark unhold nomad consul vault"
+      register: unhold_result
+      changed_when: "'Canceled hold' in unhold_result.stdout"
       when: not update_hashicorp | bool and upgrade | bool
 
     - name: Check if Hashicorp products can be updated
       become: true
-      shell: "apt list --upgradable | grep -E 'nomad|consul|vault'"
+      ansible.builtin.shell:
+        cmd: set -o pipefail && apt list --upgradable | grep -E 'nomad|consul|vault'
+        executable: /bin/bash
       register: result
       failed_when: false
       changed_when: false
       when: check_hashicorp | bool
 
     - name: Print update result
-      debug:
+      ansible.builtin.debug:
         msg: "{{ result.stdout_lines }}"
       when: check_hashicorp | bool
 
     - name: Install packages
       become: true
-      apt:
+      ansible.builtin.apt:
         name: "{{ package_list }}"
-        state: latest
-        update_cache: yes
+        state: latest # noqa: package-latest
+        update_cache: true
       when: package_list | length > 0

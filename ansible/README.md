@@ -26,20 +26,20 @@ This repository contains a collection of Ansible playbooks and roles that I use 
 ansible-playbook -i hosts playbooks/apt-update.yaml
 ```
 
-### `install-hashicorp.yaml`
+### `bootstrap.yaml`
 
-Adds the Hashicorp apt repository and installs `nomad` and `consul`.
+Adds users, sets up the base system, and installs Hashicorp (Nomad, Consul) and Docker on all `[nomad]` hosts.
 
 ```bash
-ansible-playbook -i hosts playbooks/install-hashicorp.yaml
+ansible-playbook -i hosts playbooks/bootstrap.yaml
 ```
 
-### `add-docker.yaml`
+### `tailscale.yaml`
 
-Adds the Docker apt repository and installs Docker CE.
+Installs Tailscale and connects the node to headscale. Targets the `[tailscale]` group.
 
 ```bash
-ansible-playbook -i hosts playbooks/add-docker.yaml
+ansible-playbook -i hosts playbooks/tailscale.yaml
 ```
 
 ### `configure-nomad-consul.yaml`
