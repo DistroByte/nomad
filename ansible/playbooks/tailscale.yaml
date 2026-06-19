@@ -63,13 +63,7 @@
         enabled: true
         state: started
 
-    - name: Check Tailscale backend state
-      command: tailscale status --json
-      register: tailscale_status_raw
-      changed_when: false
-      failed_when: false
-
-    - name: Connect to headscale
+    - name: Apply Tailscale configuration
       command: >
         tailscale up
         --login-server={{ tailscale_login_server }}
@@ -78,6 +72,4 @@
         {{ '--advertise-exit-node' if tailscale_exit_node else '' }}
         --accept-routes
         --hostname={{ inventory_hostname }}
-      when: >
-        tailscale_status_raw.rc != 0 or
-        (tailscale_status_raw.stdout | from_json).BackendState != 'Running'
+      changed_when: false
