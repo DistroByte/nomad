@@ -15,8 +15,11 @@ job "headscale" {
 
   group "headscale" {
     network {
-      port "http" {
+      port "headscale" {
         to = 8080
+      }
+      port "headplane" {
+        to = 3000
       }
     }
 
@@ -30,7 +33,7 @@ job "headscale" {
 
     service {
       name = "headscale"
-      port = "http"
+      port = "headscale"
 
       tags = [
         "traefik.enable=true",
@@ -45,27 +48,45 @@ job "headscale" {
       }
     }
 
-    task "headscale" {
-      driver         = "docker"
-      shutdown_delay = "5s"
+    service {
+      name = "headplane"
+      port = "headplane"
+
+      tags = [
+        "traefik.enable=true",
+        "traefik.http.routers.headplane.rule=Host(`headplane.dbyte.xyz`)",
+        "traefik.http.routers.headplane.middlewares=headplane-redirect",
+        "traefik.http.middlewares.headplane-redirect.redirectregex.regex=^https?://headplane.dbyte.xyz/?$",
+        "traefik.http.middlewares.headplane-redirect.redirectregex.replacement=https://headplane.dbyte.xyz/admin",
+        "molecule.icon=https://raw.githubusercontent.com/tale/headplane/main/app/logo/dark-bg.svg"
+      ]
+
+      check {
+        type     = "tcp"
+        interval = "10s"
+        timeout  = "2s"
+      }
+    }
+
+    # Seeds headscale config onto the CSI volume on first run.
+    # Skips the copy if the file already exists so headplane edits survive redeployments.
+    task "init" {
+      driver = "docker"
+
+      lifecycle {
+        hook    = "prestart"
+        sidecar = false
+      }
 
       config {
-        image      = "headscale/headscale:latest"
-        force_pull = true
-        ports      = ["http"]
-        command    = "serve"
-
-        mount {
-          type     = "bind"
-          source   = "local/config.yaml"
-          target   = "/etc/headscale/config.yaml"
-          readonly = true
-        }
+        image   = "alpine:latest"
+        command = "sh"
+        args    = ["-c", "mkdir -p /data/headplane && [ -f /data/config.yaml ] || cp /local/config.yaml /data/config.yaml"]
       }
 
       volume_mount {
         volume      = "headscale-data"
-        destination = "/var/lib/headscale"
+        destination = "/data"
         read_only   = false
       }
 
@@ -98,8 +119,7 @@ dns:
   base_domain: ts.dbyte.xyz
   nameservers:
     global:
-      - 1.1.1.1
-      - 8.8.8.8
+      - 192.168.0.5
 
 log:
   level: info
@@ -108,12 +128,99 @@ database:
   type: sqlite
   sqlite:
     path: /var/lib/headscale/db.sqlite
+
+policy:
+  mode: database
 EOH
+      }
+
+      resources {
+        cpu    = 50
+        memory = 32
+      }
+    }
+
+    task "headscale" {
+      driver         = "docker"
+      shutdown_delay = "5s"
+
+      config {
+        image      = "headscale/headscale:latest"
+        force_pull = true
+        ports      = ["headscale"]
+        command    = "serve"
+        args       = ["--config", "/var/lib/headscale/config.yaml"]
+
+        labels = {
+          "me.tale.headplane.target" = "headscale"
+        }
+      }
+
+      volume_mount {
+        volume      = "headscale-data"
+        destination = "/var/lib/headscale"
+        read_only   = false
       }
 
       resources {
         cpu    = 100
         memory = 128
+      }
+    }
+
+    task "headplane" {
+      driver = "docker"
+
+      config {
+        image      = "ghcr.io/tale/headplane:latest"
+        force_pull = true
+        ports      = ["headplane"]
+
+        mount {
+          type     = "bind"
+          source   = "local/config.yaml"
+          target   = "/etc/headplane/config.yaml"
+          readonly = true
+        }
+
+        mount {
+          type   = "bind"
+          source = "/var/run/docker.sock"
+          target = "/var/run/docker.sock"
+        }
+      }
+
+      volume_mount {
+        volume      = "headscale-data"
+        destination = "/var/lib/headscale"
+        read_only   = false
+      }
+
+      template {
+        destination = "local/config.yaml"
+        data        = <<EOH
+server:
+  host: "0.0.0.0"
+  port: 3000
+  base_url: "https://headplane.dbyte.xyz"
+  cookie_secret: "{{ key "tailscale/headplane/secret" }}"
+  cookie_secure: true
+  data_path: "/var/lib/headscale/headplane"
+
+headscale:
+  url: "http://{{ env "NOMAD_ADDR_headscale" }}"
+  config_path: "/var/lib/headscale/config.yaml"
+
+integration:
+  docker:
+    enabled: true
+    socket: "unix:///var/run/docker.sock"
+EOH
+      }
+
+      resources {
+        cpu    = 100
+        memory = 200
       }
     }
   }

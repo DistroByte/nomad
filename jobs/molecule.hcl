@@ -90,7 +90,7 @@ standard_urls:
   - service: "radarr"
     url: "http://dionysus.internal:7878"
   - service: "pihole"
-    url: "https://dionysus.internal/admin"
+    url: "http://dionysus.internal/admin"
     icon: "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/refs/heads/main/png/pi-hole.png"
   - service: "jackett"
     url: "http://dionysus.internal:9117"
