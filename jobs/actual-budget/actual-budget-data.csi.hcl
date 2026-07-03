@@ -1,5 +1,6 @@
 id          = "actual-budget"
 name        = "actual-budget"
+external_id = "9c2fe417-387b-4f32-9b00-790a78956b11"
 type        = "csi"
 plugin_id   = "synology"
 

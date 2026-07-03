@@ -46,7 +46,7 @@ job "actual-budget" {
       shutdown_delay = "5s"
 
       config {
-        image      = "actualbudget/actual-server:25.7.0"
+        image      = "actualbudget/actual-server:latest"
         force_pull = true
         ports      = ["http"]
       }
