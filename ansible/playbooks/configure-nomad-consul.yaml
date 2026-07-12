@@ -11,8 +11,7 @@
 - name: Configure Nomad and Consul
   hosts: nomad
   become: true
-  gather_subset:
-    - '!hardware'
+  gather_facts: false
 
   tasks:
     # --- Consul ---
@@ -222,34 +221,16 @@
         enabled: true
         state: started
 
-    # --- Host volumes for Immich postgres ---
+    # --- Host volumes ---
 
-    - name: Create Nomad host volume directory for postgres primary
+    - name: Create Nomad host volume directories
       ansible.builtin.file:
-        path: /opt/nomad/volumes/immich-postgres
+        path: "{{ item.path }}"
         state: directory
-        owner: "{{ postgres_uid }}"
-        group: "{{ postgres_gid }}"
+        owner: "{{ item.owner }}"
+        group: "{{ item.group }}"
         mode: "0750"
-      when: inventory_hostname == 'hermes'
-
-    - name: Create Nomad host volume directory for postgres replica
-      ansible.builtin.file:
-        path: /opt/nomad/volumes/immich-postgres-replica
-        state: directory
-        owner: "{{ postgres_uid }}"
-        group: "{{ postgres_gid }}"
-        mode: "0750"
-      when: inventory_hostname == 'zeus'
-
-    - name: Create Nomad host volume directory for photo MySQL
-      ansible.builtin.file:
-        path: /opt/nomad/volumes/photo-mysql
-        state: directory
-        owner: "{{ mysql_uid }}"
-        group: "{{ mysql_gid }}"
-        mode: "0750"
-      when: inventory_hostname == 'hermes'
+      loop: "{{ nomad_host_volumes }}"
 
   handlers:
     - name: Reload systemd

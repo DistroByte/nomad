@@ -37,6 +37,32 @@ ansible-playbook -i hosts playbooks/bootstrap.yaml
 ### `tailscale.yaml`
 
 Installs Tailscale and connects the node to headscale. Targets the `[tailscale]` group.
+Uses the `artis3n.tailscale` collection — install it once before first use:
+
+```bash
+ansible-galaxy collection install -r requirements.yml
+```
+
+#### Variables
+
+| Variable                   | Description                                        | Default                         |
+| -------------------------- | -------------------------------------------------- | ------------------------------- |
+| `tailscale_login_server`   | Headscale (or Tailscale control plane) URL         | `https://headscale.dbyte.xyz`   |
+| `tailscale_advertise_routes` | Subnet routes to advertise (empty = none)        | `""`                            |
+| `tailscale_exit_node`      | Advertise this node as an exit node                | `false`                         |
+| `vault_tailscale_authkey`  | Pre-auth key (ansible-vault encrypted, in all.yaml)| —                               |
+
+`tailscale_advertise_routes` and `tailscale_exit_node` are per-host — override them in `host_vars/<host>.yaml`.
+
+These three vars are composed into `tailscale_args` (the collection's variable) automatically in `group_vars/tailscale.yaml`. You don't need to set `tailscale_args` directly.
+
+To skip reconnecting nodes that are already up (e.g. in a broader config run):
+
+```bash
+ansible-playbook -i hosts playbooks/tailscale.yaml -e tailscale_up_skip=true
+```
+
+#### Example
 
 ```bash
 ansible-playbook -i hosts playbooks/tailscale.yaml

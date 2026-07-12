@@ -1,0 +1,8 @@
+---
+nomad_host_volumes:
+  - name: immich-postgres-replica
+    path: /opt/nomad/volumes/immich-postgres-replica
+    owner: "{{ postgres_uid }}"
+    group: "{{ postgres_gid }}"
+
+nomad_usb_plugin_enabled: true

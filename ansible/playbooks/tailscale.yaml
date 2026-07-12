@@ -20,29 +20,7 @@
   gather_subset:
     - '!hardware'
 
-  tasks:
-    - name: Download Tailscale GPG key
-      ansible.builtin.get_url:
-        url: https://pkgs.tailscale.com/stable/debian/bookworm.noarmor.gpg
-        dest: /etc/apt/keyrings/tailscale.gpg
-        mode: "0644"
-
-    - name: Add Tailscale apt repository
-      ansible.builtin.deb822_repository:
-        name: tailscale
-        types: deb
-        uris: https://pkgs.tailscale.com/stable/debian
-        suites: "{{ ansible_distribution_release }}"
-        components: main
-        signed_by: /etc/apt/keyrings/tailscale.gpg
-        state: present
-
-    - name: Install Tailscale
-      ansible.builtin.apt:
-        name: tailscale
-        state: present
-        update_cache: true
-
+  pre_tasks:
     - name: Enable IP forwarding for subnet routing
       ansible.posix.sysctl:
         name: "{{ item }}"
@@ -54,20 +32,5 @@
         - net.ipv4.ip_forward
         - net.ipv6.conf.all.forwarding
 
-    - name: Enable and start tailscaled
-      ansible.builtin.systemd:
-        name: tailscaled
-        enabled: true
-        state: started
-
-    - name: Apply Tailscale configuration
-      ansible.builtin.command: >
-        tailscale up
-        --login-server={{ tailscale_login_server }}
-        --authkey={{ vault_tailscale_authkey }}
-        {{ ('--advertise-routes=' + tailscale_advertise_routes) if tailscale_advertise_routes else '' }}
-        {{ '--advertise-exit-node' if tailscale_exit_node else '' }}
-        --accept-routes
-        --hostname={{ inventory_hostname }}
-        --reset
-      changed_when: false
+  roles:
+    - artis3n.tailscale.machine

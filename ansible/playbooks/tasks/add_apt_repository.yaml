@@ -1,0 +1,43 @@
+---
+# Required vars:
+#   apt_repo_name         - slug used for file names (e.g. "hashicorp")
+#   apt_repo_gpg_url      - URL to fetch the GPG key from
+#   apt_repo_uri          - base URI for the deb822 source
+# Optional vars:
+#   apt_repo_components   - apt components (default: "main")
+#   apt_repo_architectures - architecture string; omitted from source if not set
+#   apt_repo_dearmor      - whether the raw key needs gpg --dearmor (default: true)
+#                           set to false when the URL already serves a binary .gpg key
+
+- name: Download {{ apt_repo_name }} GPG key
+  become: true
+  ansible.builtin.get_url:
+    url: "{{ apt_repo_gpg_url }}"
+    dest: "{{ '/tmp/' + apt_repo_name + '.gpg' if (apt_repo_dearmor | default(true)) else '/etc/apt/keyrings/' + apt_repo_name + '.gpg' }}"
+    mode: "0644"
+
+- name: Dearmor {{ apt_repo_name }} GPG key
+  become: true
+  ansible.builtin.command:
+    cmd: "gpg --batch --yes --dearmor -o /etc/apt/keyrings/{{ apt_repo_name }}.gpg /tmp/{{ apt_repo_name }}.gpg"
+    creates: "/etc/apt/keyrings/{{ apt_repo_name }}.gpg"
+  changed_when: false
+  when: apt_repo_dearmor | default(true)
+
+- name: Set permissions on {{ apt_repo_name }} GPG key
+  become: true
+  ansible.builtin.file:
+    path: "/etc/apt/keyrings/{{ apt_repo_name }}.gpg"
+    mode: "0644"
+
+- name: Add {{ apt_repo_name }} apt repository
+  become: true
+  ansible.builtin.deb822_repository:
+    name: "{{ apt_repo_name }}"
+    types: deb
+    uris: "{{ apt_repo_uri }}"
+    suites: "{{ ansible_distribution_release }}"
+    components: "{{ apt_repo_components | default('main') }}"
+    architectures: "{{ apt_repo_architectures | default(omit) }}"
+    signed_by: "/etc/apt/keyrings/{{ apt_repo_name }}.gpg"
+    state: present

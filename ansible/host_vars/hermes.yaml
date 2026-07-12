@@ -1,3 +1,13 @@
 ---
 tailscale_advertise_routes: "192.168.0.0/24"
 tailscale_exit_node: true
+
+nomad_host_volumes:
+  - name: immich-postgres
+    path: /opt/nomad/volumes/immich-postgres
+    owner: "{{ postgres_uid }}"
+    group: "{{ postgres_gid }}"
+  - name: photo-mysql
+    path: /opt/nomad/volumes/photo-mysql
+    owner: "{{ mysql_uid }}"
+    group: "{{ mysql_gid }}"

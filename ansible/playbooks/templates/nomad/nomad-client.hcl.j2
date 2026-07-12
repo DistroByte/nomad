@@ -1,24 +1,12 @@
 client {
   enabled = true
+{% for vol in nomad_host_volumes %}
 
-{% if inventory_hostname == 'hermes' %}
-  host_volume "immich-postgres" {
-    path      = "/opt/nomad/volumes/immich-postgres"
+  host_volume "{{ vol.name }}" {
+    path      = "{{ vol.path }}"
     read_only = false
   }
-
-  host_volume "photo-mysql" {
-    path      = "/opt/nomad/volumes/photo-mysql"
-    read_only = false
-  }
-{% endif %}
-
-{% if inventory_hostname == 'zeus' %}
-  host_volume "immich-postgres-replica" {
-    path      = "/opt/nomad/volumes/immich-postgres-replica"
-    read_only = false
-  }
-{% endif %}
+{% endfor %}
 }
 
 plugin "raw_exec" {
@@ -36,7 +24,7 @@ plugin "docker" {
   }
 }
 
-{% if inventory_hostname == 'zeus' %}
+{% if nomad_usb_plugin_enabled %}
 plugin_dir = "/opt/nomad/plugins"
 
 plugin "usb" {
