@@ -1,3 +1,7 @@
+---
+title: Nomad
+---
+
 # Nomad
 
 This repo serves as an offsite store of my nomad job specs, useful ansible playbooks and my documentation.

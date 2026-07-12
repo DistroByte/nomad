@@ -1,6 +1,5 @@
 ---
 title: Mumble
-created: 2023-12-17, 3:07:14 am
 tags: [services]
 ---
 

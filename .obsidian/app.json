@@ -21,5 +21,6 @@
   },
   "defaultViewMode": "source",
   "vimMode": false,
-  "showLineNumber": false
+  "showLineNumber": false,
+  "openBehavior": ""
 }

@@ -1,6 +1,5 @@
 ---
 title: Hotkeys
-created: 2023-12-17, 4:23:39 am
 ---
 
 | Hotkey               | Usage                 |
