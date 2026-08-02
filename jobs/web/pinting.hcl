@@ -27,6 +27,8 @@ job "pinting" {
       tags = [
         "traefik.enable=true",
         "traefik.http.routers.pinting.rule=Host(`pint.ing`)",
+        "traefik.http.routers.pinting.tls=true",
+        "traefik.http.routers.pinting.tls.certresolver=ns1",
         "prometheus.io/scrape=false"
       ]
     }

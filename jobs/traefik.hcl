@@ -109,10 +109,6 @@ EOF
       sans = "*.ihatenixos.org"
 
     [[entryPoints.websecure.http.tls.domains]]
-      main = "pint.ing"
-      sans = "*.pint.ing"
-
-    [[entryPoints.websecure.http.tls.domains]]
       main = "crazybitta.biz"
       sans = "*.crazybitta.biz"
 
@@ -149,6 +145,13 @@ EOF
   storage = "{{ env "NOMAD_ALLOC_DIR" }}/data/acme.json"
   [certificatesResolvers.cloudflare.acme.dnsChallenge]
     provider = "cloudflare"
+
+[certificatesResolvers.ns1.acme]
+  email = "james@distrobyte.io"
+  storage = "{{ env "NOMAD_ALLOC_DIR" }}/data/acme-ns1.json"
+  [certificatesResolvers.ns1.acme.dnsChallenge]
+    provider = "ns1"
+    resolvers = ["1.1.1.1:53", "8.8.8.8:53"]
 
 [providers.file]
   filename = "local/traefik_dynamic.toml"
