@@ -36,6 +36,7 @@
       ansible.builtin.command: "apt-mark hold nomad consul vault"
       register: hold_result
       changed_when: "'set on hold.' in hold_result.stdout"
+      failed_when: false
       when: not update_hashicorp | bool and upgrade | bool
 
     - name: Apt update and apt upgrade
@@ -66,6 +67,7 @@
       ansible.builtin.command: "apt-mark unhold nomad consul vault"
       register: unhold_result
       changed_when: "'Canceled hold' in unhold_result.stdout"
+      failed_when: false
       when: not update_hashicorp | bool and upgrade | bool
 
     - name: Check if Hashicorp products can be updated
