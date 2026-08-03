@@ -36,7 +36,8 @@ job "traefik" {
       port = "admin"
 
       check {
-        type     = "tcp"
+        type     = "http"
+        path     = "/ping"
         interval = "10s"
         timeout  = "2s"
       }
@@ -52,7 +53,8 @@ job "traefik" {
 
         volumes = [
           "local/traefik.toml:/etc/traefik/traefik.toml",
-          "local/traefik_dynamic.toml:/etc/traefik/traefik_dynamic.toml"
+          "local/traefik_dynamic.toml:/etc/traefik/traefik_dynamic.toml",
+          "local/mediashare.htpasswd:/etc/traefik/mediashare.htpasswd"
         ]
       }
 
@@ -67,6 +69,14 @@ EOF
       }
 
       template {
+        data        = <<EOF
+{{ key "mediashare/htpasswd" }}
+EOF
+        destination = "local/mediashare.htpasswd"
+        perms       = "400"
+      }
+
+      template {
         data = <<EOF
 [log]
   level = "INFO"
@@ -77,6 +87,9 @@ EOF
 [api]
   dashboard = true
   insecure = true
+
+[ping]
+  entryPoint = "traefik"
 
 [entryPoints]
   [entryPoints.web]
@@ -106,22 +119,22 @@ EOF
 
     [[entryPoints.websecure.http.tls.domains]]
       main = "ihatenixos.org"
-      sans = "*.ihatenixos.org"
+      sans = ["*.ihatenixos.org"]
 
     [[entryPoints.websecure.http.tls.domains]]
       main = "crazybitta.biz"
-      sans = "*.crazybitta.biz"
+      sans = ["*.crazybitta.biz"]
 
     [[entryPoints.websecure.http.tls.domains]]
       main = "nicecocks.biz"
-      sans = "*.nicecocks.biz"
+      sans = ["*.nicecocks.biz"]
 
   [entryPoints.traefik]
     address = ":8081"
 
   [entryPoints.voice-tcp]
     address = ":64738"
-  
+
   [entryPoints.voice-udp]
     address = ":64738/udp"
     [entryPoints.voice-udp.udp]
@@ -190,11 +203,14 @@ EOF
 
 [http.routers.photo-wellknown]
   rule = "Host(`photo.james-hackett.ie`) && PathRegexp(`^/.well-known/(webfinger|nodeinfo)$`)"
-  service = "ghost-activitypub"  
+  service = "ghost-activitypub"
   priority = 200
 
 [[http.services.ghost-activitypub.loadBalancer.servers]]
   url = "https://ap.ghost.org"
+
+[http.middlewares.mediashare-auth.basicAuth]
+  usersFile = "/etc/traefik/mediashare.htpasswd"
 EOH
 
         destination = "local/traefik_dynamic.toml"
