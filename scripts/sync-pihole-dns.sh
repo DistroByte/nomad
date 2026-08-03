@@ -25,11 +25,6 @@ readonly TRAEFIK_IP="${TRAEFIK_IP:-192.168.0.4}"
 readonly PIHOLE_URL="${PIHOLE_URL:-http://dionysus.internal}"
 readonly PIHOLE_PASSWORD="${PIHOLE_PASSWORD:-}"
 
-# Hosts to keep on public DNS instead of pointing at Traefik locally. The
-# headscale control plane and its UI are excluded so they always resolve to the
-# public IP — a cold tailscaled start from away needs to reach headscale before
-# the tunnel (and thus the LAN route) exists. Local records target the
-# media-heavy apps that would otherwise hairpin through the exit node.
 # Space-separated; override via the EXCLUDE_HOSTS environment variable.
 readonly EXCLUDE_HOSTS="${EXCLUDE_HOSTS:-headscale.dbyte.xyz headplane.dbyte.xyz}"
 
@@ -45,8 +40,6 @@ is_excluded() {
 }
 
 generate_lines() {
-  # Collect every Host(`fqdn`) from active jobs (excluding jobs/archive), dedupe,
-  # and emit one explicit dnsmasq address= record per host pointing at Traefik.
   # shellcheck disable=SC2016  # the Host(...) patterns are literal regexes, not shell expansions
   grep -rEl 'Host\(`[^`]+`\)' "${repo_root}/jobs" --include='*.hcl' \
     | grep -v '/archive/' \
@@ -59,41 +52,52 @@ generate_lines() {
       done
 }
 
-pihole_session() {
-  # Echo a session id for authenticated requests. A passwordless Pi-hole reports
-  # a valid session with a null sid ("no password set") — in that case the API is
-  # open and no sid is needed, so echo nothing and succeed.
-  local response valid sid
-  response="$(curl -fsS -X POST "${PIHOLE_URL}/api/auth" \
+PIHOLE_SID=""
+readonly PIHOLE_UNREACHABLE=2
+
+pihole_login() {
+  local response valid status=0
+  response="$(curl -fsS --connect-timeout 5 -X POST "${PIHOLE_URL}/api/auth" \
     -H 'Content-Type: application/json' \
-    -d "{\"password\":\"${PIHOLE_PASSWORD}\"}")"
+    -d "{\"password\":\"${PIHOLE_PASSWORD}\"}" 2>/dev/null)" || status=$?
+
+  if (( status != 0 )); then
+    return "${PIHOLE_UNREACHABLE}"
+  fi
+
   valid="$(printf '%s' "${response}" | jq -r '.session.valid // false')"
-  sid="$(printf '%s' "${response}" | jq -r '.session.sid // empty')"
   if [[ "${valid}" != "true" ]]; then
     echo "error: Pi-hole authentication failed (check PIHOLE_PASSWORD)" >&2
     return 1
   fi
-  printf '%s' "${sid}"
+  PIHOLE_SID="$(printf '%s' "${response}" | jq -r '.session.sid // empty')"
 }
 
 apply_lines() {
-  local lines_json sid
+  local lines_json status=0
+  pihole_login || status=$?
+  if (( status == PIHOLE_UNREACHABLE )); then
+    echo "Pi-hole not reachable at ${PIHOLE_URL} — skipping (are you on the tailnet?)" >&2
+    return 0
+  elif (( status != 0 )); then
+    return 1
+  fi
+
   lines_json="$(generate_lines | jq -R . | jq -s .)"
-  sid="$(pihole_session)"
 
   # Only send the session header when a sid was issued (password-protected
   # instances); a passwordless instance rejects an empty header.
   local auth_header=()
-  [[ -n "${sid}" ]] && auth_header=(-H "X-FTL-SID: ${sid}")
+  [[ -n "${PIHOLE_SID}" ]] && auth_header=(-H "X-FTL-SID: ${PIHOLE_SID}")
 
   curl -fsS -X PATCH "${PIHOLE_URL}/api/config" \
     -H 'Content-Type: application/json' \
     "${auth_header[@]}" \
     -d "{\"config\":{\"misc\":{\"dnsmasq_lines\":${lines_json}}}}" >/dev/null
 
-  if [[ -n "${sid}" ]]; then
+  if [[ -n "${PIHOLE_SID}" ]]; then
     # Invalidate the session so it does not linger.
-    curl -fsS -X DELETE "${PIHOLE_URL}/api/auth" -H "X-FTL-SID: ${sid}" >/dev/null || true
+    curl -fsS -X DELETE "${PIHOLE_URL}/api/auth" -H "X-FTL-SID: ${PIHOLE_SID}" >/dev/null || true
   fi
 
   echo "Applied $(generate_lines | wc -l | tr -d ' ') records to Pi-hole." >&2

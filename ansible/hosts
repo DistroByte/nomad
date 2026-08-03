@@ -1,13 +1,25 @@
-[nomad]
+[home]
 zeus   ansible_host=192.168.0.3
 hermes ansible_host=192.168.0.4
 
+[home:vars]
+ansible_user=distro
+
+[cloud]
+observability.cloud
+worker.cloud
+
+[cloud:vars]
+ansible_user=ubuntu
+
+[nomad]
+zeus
+hermes
+
 [gatus]
-observability ansible_host=132.226.210.138 ansible_user=ubuntu
+observability.cloud
 
 [tailscale]
 hermes
-observability
-
-[all:vars]
-ansible_user=distro
+observability.cloud
+worker.cloud

@@ -58,58 +58,6 @@ nomad alloc exec -job headscale headscale nodes approve-routes \
 
 For a node that is only a subnet router (not an exit node), omit `0.0.0.0/0` and `::/0`.
 
-## Adding a New Exit Node (Another Region)
-
-1. Provision a VPS, add it to the inventory:
-
-```ini
-# ansible/hosts
-[tailscale]
-hermes tailscale_advertise_routes="192.168.0.0/24" tailscale_exit_node=true
-us-east ansible_host=1.2.3.4 ansible_user=debian
-```
-
-2. Create its host vars:
-
-```yaml
-# ansible/host_vars/us-east.yaml
-tailscale_exit_node: true
-```
-
-3. Run the playbook against it:
-
-```bash
-ansible-playbook -i ansible/hosts ansible/playbooks/tailscale.yaml --limit us-east
-```
-
-4. Register it with headscale. If using interactive auth:
-
-```bash
-nomad alloc exec -job headscale headscale nodes register --user 1 --key <nodekey>
-```
-
-5. Approve its exit node routes:
-
-```bash
-nomad alloc exec -job headscale headscale nodes list-routes --identifier <id>
-nomad alloc exec -job headscale headscale nodes approve-routes \
-  --identifier <id> \
-  --routes 0.0.0.0/0,::/0
-```
-
-The new node now appears in the Tailscale app as a selectable exit node alongside hermes.
-
-## Registering a Client Device (Phone / Laptop)
-
-Install Tailscale, point it at `https://headscale.dbyte.xyz` as the control server. Either:
-
-- **Pre-auth key**: use the key generated above — no server-side approval needed.
-- **Interactive**: headscale will print a registration command to run:
-
-```bash
-nomad alloc exec -job headscale headscale nodes register --user 1 --key <nodekey-from-device>
-```
-
 ## Useful Commands
 
 ```bash
