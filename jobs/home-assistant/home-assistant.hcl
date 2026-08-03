@@ -55,6 +55,7 @@ job "home-assistant" {
     task "hass" {
       driver = "docker"
       shutdown_delay = "5s"
+      kill_timeout   = "30s"
       config {
         image        = "homeassistant/home-assistant:latest"
         force_pull   = true
