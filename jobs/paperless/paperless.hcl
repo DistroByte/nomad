@@ -91,6 +91,7 @@ EOH
 
     task "paperless-broker" {
       driver = "docker"
+      shutdown_delay = "5s"
 
       config {
         image      = "docker.io/library/redis:7"

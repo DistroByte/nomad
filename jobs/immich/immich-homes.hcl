@@ -4,9 +4,8 @@ id          = "immich-homes"
 name        = "Immich Homes"
 
 capability {
-  access_mode = "multi-node-multi-writer"
-	// access_mode = "single-node-reader-only"
-	attachment_mode = "file-system"
+  access_mode     = "multi-node-multi-writer"
+  attachment_mode = "file-system"
 }
 
 context {

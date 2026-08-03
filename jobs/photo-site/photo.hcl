@@ -144,16 +144,16 @@ echo "Setting up Tinybird CLI in background..."
   echo "Testing Tinybird authentication..."
   if tb --cloud --host "${TINYBIRD_API_URL}" --token "${TINYBIRD_ADMIN_TOKEN}" workspace ls >/dev/null 2>&1; then
       echo "Tinybird authentication successful!"
-      
+
       # Look for Ghost's built-in Tinybird files
       TINYBIRD_PATH="/var/lib/ghost/current/core/server/data/tinybird"
       if [[ -d "$TINYBIRD_PATH" ]]; then
           echo "Found Ghost's Tinybird analytics files, running deployment..."
-          
+
           # Save current directory and change to Tinybird path
           ORIGINAL_DIR=$(pwd)
           cd "$TINYBIRD_PATH"
-          
+
           # Run Tinybird deployment
           echo "Deploying Tinybird analytics schema..."
           if tb --cloud --host "${TINYBIRD_API_URL}" --token "${TINYBIRD_ADMIN_TOKEN}" deploy --wait >/dev/null 2>&1; then
@@ -161,7 +161,7 @@ echo "Setting up Tinybird CLI in background..."
           else
               echo "Warning: Tinybird deployment failed, but Ghost continues running..."
           fi
-          
+
           # Return to original directory
           cd "$ORIGINAL_DIR"
       else
@@ -182,7 +182,6 @@ EOF
       template {
         data        = <<EOF
 url="https://{{ key "ghost/domain" }}"
-#admin__url="https://{{ key "ghost/admin_domain" }}"
 database__client="mysql"
 database__connection__host={{ env "NOMAD_IP_db" }}
 database__connection__port={{ env "NOMAD_HOST_PORT_db" }}
