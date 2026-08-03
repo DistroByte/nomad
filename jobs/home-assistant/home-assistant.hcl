@@ -15,16 +15,16 @@ job "home-assistant" {
     count = 1
     network {
       port "http" {
-        static = "8123"
+        static = 8123
       }
       port "z2mhttp" {
-        to = "8080"
+        to = 8080
       }
       port "mqtthttp" {
-        static = "9001"
+        static = 9001
       }
       port "mqttdisc" {
-        static = "1883"
+        static = 1883
       }
     }
 
@@ -60,6 +60,15 @@ job "home-assistant" {
         force_pull   = true
         network_mode = "host"
         privileged   = true
+
+        # HA's automatic backups write to /config/backups, i.e. the same LUN they
+        # protect. Redirect them to the /backups NFS share so they survive loss of
+        # the homeassistant Synology LUN.
+        mount {
+          type   = "bind"
+          target = "/config/backups"
+          source = "/backups/home-assistant"
+        }
       }
 
       volume_mount {
@@ -85,7 +94,8 @@ job "home-assistant" {
         ]
 
         check {
-          type     = "tcp"
+          type     = "http"
+          path     = "/manifest.json"
           interval = "10s"
           timeout  = "2s"
         }
@@ -121,11 +131,18 @@ job "home-assistant" {
       service {
         name = "mqtt"
         port = "mqttdisc"
+
+        check {
+          type     = "tcp"
+          interval = "10s"
+          timeout  = "2s"
+        }
       }
     }
 
     task "zigbee2mqtt" {
       driver = "docker"
+      shutdown_delay = "5s"
       config {
         image      = "koenkk/zigbee2mqtt:latest"
         force_pull = true
@@ -158,6 +175,64 @@ job "home-assistant" {
         cpu    = 100
         memory = 300
         device "1cf1/usb/0030" {}
+      }
+    }
+
+    # Daily off-LUN backup of the Zigbee2MQTT data (network keys, device database,
+    # coordinator backup) to the /backups NFS share, so losing the z2m Synology LUN
+    # doesn't mean re-pairing every device. Runs in-alloc because the LUN is
+    # single-node-writer and can't be co-mounted from a separate job.
+    task "z2m-backup" {
+      driver = "docker"
+
+      lifecycle {
+        hook    = "poststart"
+        sidecar = true
+      }
+
+      config {
+        image      = "alpine:latest"
+        entrypoint = ["/bin/sh"]
+        args       = ["/local/backup.sh"]
+
+        mount {
+          type   = "bind"
+          target = "/backup"
+          source = "/backups/zigbee2mqtt"
+        }
+      }
+
+      volume_mount {
+        volume      = "z2m-data"
+        destination = "/z2m-data"
+        read_only   = true
+      }
+
+      template {
+        destination = "local/backup.sh"
+        perms       = "755"
+        data        = <<EOH
+#!/bin/sh
+# No `set -e`: a transient tar failure must not kill the sidecar and cascade to
+# the alloc. Log and keep looping instead.
+while true; do
+  stamp=$(date +%Y%m%d%H%M)
+  if tar czf "/backup/z2m.$stamp.tar.gz" -C /z2m-data . ; then
+    # Keep the 14 most recent archives.
+    ls -1t /backup/z2m.*.tar.gz 2>/dev/null | tail -n +15 | while read -r old; do
+      rm -f "$old"
+    done
+  else
+    echo "z2m backup failed at $stamp" >&2
+  fi
+  sleep 86400
+done
+EOH
+      }
+
+      resources {
+        cpu    = 50
+        memory = 32
       }
     }
   }
