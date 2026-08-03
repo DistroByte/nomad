@@ -1,0 +1,277 @@
+storage:
+  type: sqlite
+  path: /data/data.db
+
+ui:
+  title: Homelab External Monitor
+  header: homelab · watched from off-site
+
+alerting:
+  ntfy:
+    # Public ntfy.sh by default so the alert path survives a full lab outage.
+    # Repoint `url` at a self-hosted ntfy only if it lives OFF the monitored
+    url: "https://ntfy.sh"
+    topic: "${NTFY_TOPIC}"
+    priority: 4
+    # token: "${NTFY_TOKEN}"   # uncomment for a protected/self-hosted ntfy
+    default-alert:
+      enabled: true
+      failure-threshold: 3
+      success-threshold: 2
+      send-on-resolved: true
+
+endpoints:
+  - name: james-hackett.ie
+    group: public-sites
+    url: "https://james-hackett.ie"
+    interval: 60s
+    conditions:
+      - "[STATUS] == 200"
+      - "[RESPONSE_TIME] < 2000"
+      - "[CERTIFICATE_EXPIRATION] > 168h"
+    alerts:
+      - type: ntfy
+
+  - name: photo.james-hackett.ie
+    group: public-sites
+    url: "https://photo.james-hackett.ie"
+    interval: 60s
+    conditions:
+      - "[STATUS] == 200"
+      - "[RESPONSE_TIME] < 2000"
+      - "[CERTIFICATE_EXPIRATION] > 168h"
+    alerts:
+      - type: ntfy
+
+  - name: ihatenixos.org
+    group: public-sites
+    url: "https://ihatenixos.org"
+    interval: 60s
+    conditions:
+      - "[STATUS] == 200"
+      - "[RESPONSE_TIME] < 2000"
+      - "[CERTIFICATE_EXPIRATION] > 168h"
+    alerts:
+      - type: ntfy
+
+  - name: crazybitta.biz
+    group: public-sites
+    url: "https://crazybitta.biz"
+    interval: 60s
+    conditions:
+      - "[STATUS] == 200"
+      - "[RESPONSE_TIME] < 2000"
+      - "[CERTIFICATE_EXPIRATION] > 168h"
+    alerts:
+      - type: ntfy
+
+  - name: nicecocks.biz
+    group: public-sites
+    url: "https://nicecocks.biz"
+    interval: 60s
+    conditions:
+      - "[STATUS] == 200"
+      - "[RESPONSE_TIME] < 2000"
+      - "[CERTIFICATE_EXPIRATION] > 168h"
+    alerts:
+      - type: ntfy
+
+  - name: pint.ing
+    group: public-sites
+    url: "https://pint.ing"
+    interval: 60s
+    conditions:
+      - "[STATUS] == 200"
+      - "[RESPONSE_TIME] < 2000"
+      - "[CERTIFICATE_EXPIRATION] > 168h"
+    alerts:
+      - type: ntfy
+
+  - name: headscale
+    group: ingress
+    url: "https://headscale.dbyte.xyz"
+    interval: 30s
+    conditions:
+      - "[STATUS] == any(200, 204, 301, 302, 404)"
+      - "[CERTIFICATE_EXPIRATION] > 168h"
+    alerts:
+      - type: ntfy
+
+  - name: headplane
+    group: ingress
+    url: "https://headplane.dbyte.xyz"
+    interval: 30s
+    conditions:
+      - "[STATUS] == any(200, 301, 302, 401, 403)"
+    alerts:
+      - type: ntfy
+
+  - name: hermes-https-port
+    group: ingress
+    url: "tcp://headscale.dbyte.xyz:443"
+    interval: 30s
+    conditions:
+      - "[CONNECTED] == true"
+    alerts:
+      - type: ntfy
+
+  - name: mumble-voice
+    group: ingress
+    url: "tcp://mumble.dbyte.xyz:64738"
+    interval: 60s
+    conditions:
+      - "[CONNECTED] == true"
+    alerts:
+      - type: ntfy
+
+  - name: dynamic-dns-drift
+    group: ingress
+    url: "1.1.1.1"
+    interval: 300s
+    dns:
+      query-name: "headscale.dbyte.xyz"
+      query-type: "A"
+    conditions:
+      - "[DNS_RCODE] == NOERROR"
+      - "[BODY] != 0.0.0.0"
+    alerts:
+      - type: ntfy
+
+  - name: vault
+    group: apps
+    url: "https://vault.dbyte.xyz"
+    interval: 120s
+    conditions:
+      - "[STATUS] == any(200, 301, 302, 307, 401, 403)"
+    alerts:
+      - type: ntfy
+
+  - name: immich
+    group: apps
+    url: "https://immich.dbyte.xyz"
+    interval: 120s
+    conditions:
+      - "[STATUS] == any(200, 301, 302, 307, 401, 403)"
+    alerts:
+      - type: ntfy
+
+  - name: paperless
+    group: apps
+    url: "https://paperless.dbyte.xyz"
+    interval: 120s
+    conditions:
+      - "[STATUS] == any(200, 301, 302, 307, 401, 403)"
+    alerts:
+      - type: ntfy
+
+  - name: actual
+    group: apps
+    url: "https://actual.dbyte.xyz"
+    interval: 120s
+    conditions:
+      - "[STATUS] == any(200, 301, 302, 307, 401, 403)"
+    alerts:
+      - type: ntfy
+
+  - name: home-assistant
+    group: apps
+    url: "https://ha.dbyte.xyz"
+    interval: 120s
+    conditions:
+      - "[STATUS] == any(200, 301, 302, 307, 401, 403)"
+    alerts:
+      - type: ntfy
+
+  - name: jellyseerr
+    group: apps
+    url: "https://request.dbyte.xyz"
+    interval: 120s
+    conditions:
+      - "[STATUS] == any(200, 301, 302, 307, 401, 403)"
+    alerts:
+      - type: ntfy
+
+  - name: molecule
+    group: apps
+    url: "https://molecule.dbyte.xyz"
+    interval: 120s
+    conditions:
+      - "[STATUS] == any(200, 301, 302, 307, 401, 403)"
+    alerts:
+      - type: ntfy
+
+  - name: synology-drive
+    group: apps
+    url: "https://drive.dbyte.xyz"
+    interval: 120s
+    conditions:
+      - "[STATUS] == any(200, 301, 302, 307, 401, 403)"
+    alerts:
+      - type: ntfy
+
+  - name: jellyfin
+    group: apps
+    url: "https://video.dbyte.xyz"
+    interval: 120s
+    conditions:
+      - "[STATUS] == any(200, 301, 302, 307, 401, 403)"
+    alerts:
+      - type: ntfy
+
+  - name: nomad-zeus
+    group: internal
+    url: "http://192.168.0.3:4646/v1/agent/health"
+    interval: 60s
+    conditions:
+      - "[STATUS] == 200"
+    alerts:
+      - type: ntfy
+
+  - name: consul-zeus
+    group: internal
+    url: "http://192.168.0.3:8500/v1/status/leader"
+    interval: 60s
+    conditions:
+      - "[STATUS] == 200"
+      - "[BODY] != \"\""
+    alerts:
+      - type: ntfy
+
+  - name: traefik-ping
+    group: internal
+    url: "http://192.168.0.4:8081/ping"
+    interval: 60s
+    conditions:
+      - "[STATUS] == 200"
+    alerts:
+      - type: ntfy
+
+  - name: pihole-dns
+    group: internal
+    url: "192.168.0.5"
+    interval: 60s
+    dns:
+      query-name: "dbyte.xyz"
+      query-type: "A"
+    conditions:
+      - "[DNS_RCODE] == NOERROR"
+    alerts:
+      - type: ntfy
+
+  - name: synology-dsm
+    group: internal
+    url: "tcp://192.168.0.5:5001"
+    interval: 60s
+    conditions:
+      - "[CONNECTED] == true"
+    alerts:
+      - type: ntfy
+
+external-endpoints:
+  - name: heartbeat
+    group: core
+    token: "${HEARTBEAT_TOKEN}"
+    heartbeat:
+      interval: 10m
+    alerts:
+      - type: ntfy

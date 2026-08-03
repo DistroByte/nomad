@@ -5,11 +5,11 @@ tags: [services, infrastructure]
 
 [Vaultwarden](https://github.com/dani-garcia/vaultwarden) is an unofficial Bitwarden compatible server written in Rust. It has many capabilities that mimic [Bitwarden](https://bitwarden.com/) premium.
 
-Vaultwarden is deployed and configured with the [vaultwarden](../jobs/vaultwarden.hcl) job alongside a [PostgreSQL](PostgreSQL.md) database.
+Vaultwarden is deployed and configured with the [vaultwarden](../jobs/vaultwarden/vaultwarden.hcl) job. Its data lives on the `vaultwarden` Synology CSI volume, and its secrets (admin token, SMTP, Yubico) are pulled from Consul KV.
 
 ## Backups
 
-The data stored in Vaultwarden is stored on my NFS share on [Synology DS920+](Synology%20DS920+.md), and the configuration in the [PostgreSQL](PostgreSQL.md) database is backed up according to the [postgresql-backup](../jobs/postgresql/postgresql-backup.hcl) job.
+Vaultwarden's `/data` sits on the `vaultwarden` CSI volume, backed by NFS on the [Synology DS920+](Synology%20DS920+.md). There is no application-level backup job — durability relies on the Synology volume itself.
 
 ## Security Concerns
 

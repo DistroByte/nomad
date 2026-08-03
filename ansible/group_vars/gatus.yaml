@@ -1,0 +1,15 @@
+---
+# Config for the [gatus] group (the off-site observability host).
+#
+# Secrets live in ansible-vault. Add them to group_vars/all.yaml, e.g.:
+#   ansible-vault encrypt_string "$(openssl rand -hex 16)" \
+#     --name vault_gatus_ntfy_topic >> ansible/group_vars/all.yaml
+#   ansible-vault encrypt_string "$(openssl rand -hex 16)" \
+#     --name vault_gatus_heartbeat_token >> ansible/group_vars/all.yaml
+# vault_gatus_ntfy_token is optional (protected/self-hosted ntfy only).
+
+gatus_deploy_dir: /opt/gatus
+
+gatus_ntfy_topic: "{{ vault_gatus_ntfy_topic }}"
+gatus_ntfy_token: "{{ vault_gatus_ntfy_token | default('') }}"
+gatus_heartbeat_token: "{{ vault_gatus_heartbeat_token }}"

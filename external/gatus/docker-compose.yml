@@ -1,0 +1,15 @@
+services:
+  gatus:
+    image: twinproduction/gatus:latest
+    container_name: gatus
+    restart: unless-stopped
+    ports:
+      - "${GATUS_BIND_ADDR:-127.0.0.1}:8080:8080"
+    volumes:
+      - ./config.yaml:/config/config.yaml:ro
+      - gatus-data:/data
+    env_file:
+      - .env
+
+volumes:
+  gatus-data:

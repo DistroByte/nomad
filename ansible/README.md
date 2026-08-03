@@ -10,6 +10,9 @@ This repository contains a collection of Ansible playbooks and roles that I use 
 
 ## Usage
 
+Run all commands from the **repository root** — `ansible.cfg` lives there and is
+auto-discovered, so there's no need to `cd` into `ansible/`.
+
 ### `apt-update.yaml`
 
 | Variable            | Description                                | Default |
@@ -22,7 +25,7 @@ This repository contains a collection of Ansible playbooks and roles that I use 
 #### Example
 
 ```bash
-ansible-playbook -i hosts playbooks/apt-update.yaml
+ansible-playbook -i ansible/hosts ansible/playbooks/apt-update.yaml
 ```
 
 ### `bootstrap.yaml`
@@ -30,7 +33,7 @@ ansible-playbook -i hosts playbooks/apt-update.yaml
 Adds users, sets up the base system, and installs Hashicorp (Nomad, Consul) and Docker on all `[nomad]` hosts.
 
 ```bash
-ansible-playbook -i hosts playbooks/bootstrap.yaml
+ansible-playbook -i ansible/hosts ansible/playbooks/bootstrap.yaml
 ```
 
 ### `tailscale.yaml`
@@ -40,7 +43,7 @@ Installs Tailscale and connects the node to headscale. Targets the `[tailscale]`
 Uses the `artis3n.tailscale` collection — install it once before first use:
 
 ```bash
-ansible-galaxy collection install -r requirements.yml
+ansible-galaxy collection install -r ansible/requirements.yml
 ```
 
 #### Variables
@@ -59,7 +62,7 @@ These three vars are composed into `tailscale_args` (the collection's variable) 
 To skip reconnecting nodes that are already up (e.g. in a broader config run):
 
 ```bash
-ansible-playbook -i hosts playbooks/tailscale.yaml -e '{"tailscale_up_skip": true}'
+ansible-playbook -i ansible/hosts ansible/playbooks/tailscale.yaml -e '{"tailscale_up_skip": true}'
 ```
 
 Note: the boolean must be passed as JSON — `-e tailscale_up_skip=true` passes a string and the role's conditional will fail.
@@ -67,7 +70,7 @@ Note: the boolean must be passed as JSON — `-e tailscale_up_skip=true` passes 
 #### Example
 
 ```bash
-ansible-playbook -i hosts playbooks/tailscale.yaml
+ansible-playbook -i ansible/hosts ansible/playbooks/tailscale.yaml
 ```
 
 ### `configure-nomad-consul.yaml`
@@ -87,7 +90,7 @@ The vault password is fetched automatically from Bitwarden via `vault-password.s
 Store the vault password in Bitwarden as an item named **`ansible-vault`**, then run:
 
 ```bash
-ansible-playbook -i hosts playbooks/configure-nomad-consul.yaml
+ansible-playbook -i ansible/hosts ansible/playbooks/configure-nomad-consul.yaml
 ```
 
 If your Bitwarden vault is locked, the script will prompt for your master password once.
@@ -96,5 +99,5 @@ You can also pre-unlock and export the session to avoid the prompt:
 
 ```bash
 export BW_SESSION=$(bw unlock --raw)
-ansible-playbook -i hosts playbooks/configure-nomad-consul.yaml
+ansible-playbook -i ansible/hosts ansible/playbooks/configure-nomad-consul.yaml
 ```

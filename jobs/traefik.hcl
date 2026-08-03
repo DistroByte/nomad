@@ -175,13 +175,6 @@ EOF
 
       template {
         data = <<EOH
-[http.routers.synophotos]
-  rule = "Host(`photos.dbyte.xyz`)"
-  service = "synophotos"
-
-[[http.services.synophotos.loadBalancer.servers]]
-  url = "http://192.168.0.5:5007/"
-
 [http.routers.synodrive]
   rule = "Host(`drive.dbyte.xyz`)"
   service = "synodrive"

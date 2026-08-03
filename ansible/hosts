@@ -2,8 +2,12 @@
 zeus   ansible_host=192.168.0.3
 hermes ansible_host=192.168.0.4
 
+[gatus]
+observability ansible_host=132.226.210.138 ansible_user=ubuntu
+
 [tailscale]
 hermes
+observability
 
 [all:vars]
 ansible_user=distro

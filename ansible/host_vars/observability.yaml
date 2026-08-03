@@ -1,0 +1,3 @@
+---
+tailscale_advertise_routes: ""
+tailscale_exit_node: false

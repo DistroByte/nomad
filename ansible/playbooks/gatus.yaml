@@ -1,0 +1,78 @@
+---
+# Deploys the off-site Gatus external monitor via Docker Compose. The monitor
+# lives outside the Nomad cluster on purpose, so it is not written as a Nomad
+# job — an outage of the thing it watches must not take it down.
+#
+# Prerequisites:
+#   1. The host is in the [gatus] and [tailscale] inventory groups (ansible/hosts).
+#   2. tailscale.yaml has been run against it so it holds hermes' 192.168.0.0/24
+#      subnet route (needed for the `internal` check group):
+#        ansible-playbook -i ansible/hosts ansible/playbooks/tailscale.yaml --limit observability
+#      Then approve the route server-side (see docs/Headscale.md).
+#   3. ntfy topic/token + heartbeat token stored in ansible-vault
+#      (see ansible/group_vars/gatus.yaml).
+#   4. community.docker installed: ansible-galaxy collection install -r requirements.yml
+#
+# Deploy:
+#   ansible-playbook -i ansible/hosts ansible/playbooks/gatus.yaml --limit observability
+- name: Deploy Gatus external monitor
+  hosts: gatus
+  become: true
+  gather_subset:
+    - '!hardware'
+
+  tasks:
+    - name: Install Docker Engine
+      ansible.builtin.shell:
+        cmd: curl -fsSL https://get.docker.com | sh
+        creates: /usr/bin/docker
+
+    - name: Discover Tailscale IPv4 to bind Gatus to
+      ansible.builtin.command: tailscale ip -4
+      register: tailscale_ip
+      changed_when: false
+
+    - name: Bind Gatus to the tailnet IP
+      ansible.builtin.set_fact:
+        gatus_bind_addr: "{{ tailscale_ip.stdout_lines[0] | trim }}"
+
+    - name: Ensure deploy directory exists
+      ansible.builtin.file:
+        path: "{{ gatus_deploy_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Sync Gatus compose + config
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../../external/gatus/{{ item }}"
+        dest: "{{ gatus_deploy_dir }}/{{ item }}"
+        owner: root
+        group: root
+        mode: "0644"
+      loop:
+        - docker-compose.yml
+        - config.yaml
+      notify: Restart Gatus
+
+    - name: Render .env with secrets
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/templates/gatus/env.j2"
+        dest: "{{ gatus_deploy_dir }}/.env"
+        owner: root
+        group: root
+        mode: "0600"
+      notify: Restart Gatus
+
+    - name: Start Gatus
+      community.docker.docker_compose_v2:
+        project_src: "{{ gatus_deploy_dir }}"
+        state: present
+        pull: always
+
+  handlers:
+    - name: Restart Gatus
+      community.docker.docker_compose_v2:
+        project_src: "{{ gatus_deploy_dir }}"
+        state: restarted
