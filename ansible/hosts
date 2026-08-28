@@ -24,9 +24,10 @@ hermes
 observability.cloud
 
 [tailscale]
+# worker is deliberately absent: it serves the control plane over the public
+# internet and must not depend on the tailnet it hands out.
 hermes
 observability.cloud
-worker.cloud
 
 [headscale]
 worker.cloud
