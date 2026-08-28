@@ -89,10 +89,11 @@ endpoints:
 
   - name: headscale
     group: ingress
-    url: "https://headscale.dbyte.xyz"
+    url: "https://headscale.dbyte.xyz/health"
     interval: 30s
     conditions:
-      - "[STATUS] == any(200, 204, 301, 302, 404)"
+      - "[STATUS] == 200"
+      - "[BODY].status == pass"
       - "[CERTIFICATE_EXPIRATION] > 168h"
     alerts:
       - type: ntfy
@@ -282,24 +283,6 @@ endpoints:
   - name: relay-observability-voice
     group: relay
     url: "tcp://${RELAY_OBSERVABILITY_HOST}:64738"
-    interval: 120s
-    conditions:
-      - "[CONNECTED] == true"
-    alerts:
-      - type: ntfy
-
-  - name: relay-worker-https
-    group: relay
-    url: "tcp://${RELAY_WORKER_HOST}:443"
-    interval: 60s
-    conditions:
-      - "[CONNECTED] == true"
-    alerts:
-      - type: ntfy
-
-  - name: relay-worker-voice
-    group: relay
-    url: "tcp://${RELAY_WORKER_HOST}:64738"
     interval: 120s
     conditions:
       - "[CONNECTED] == true"

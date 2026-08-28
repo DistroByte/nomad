@@ -14,8 +14,6 @@ gatus_ntfy_topic: "{{ vault_gatus_ntfy_topic }}"
 gatus_ntfy_token: "{{ vault_gatus_ntfy_token | default('') }}"
 gatus_heartbeat_token: "{{ vault_gatus_heartbeat_token }}"
 
-# Public IPv4 of each relay in the [relay] group, probed individually so a relay
-# outage is distinguishable from a Traefik outage. Both must be set before
-# re-running gatus.yaml — an empty value makes the probe fail and alert.
+# Public IPv4 of the relay, probed directly so a relay outage is
+# distinguishable from a Traefik outage.
 gatus_relay_observability_host: "132.226.210.138"
-gatus_relay_worker_host: "141.147.74.4"
