@@ -5,6 +5,15 @@ services:
     restart: unless-stopped
     ports:
       - "${GATUS_BIND_ADDR:-127.0.0.1}:8080:8080"
+    # Public resolvers, deliberately not the host's. Pi-hole answers homelab
+    # hostnames with 192.168.0.4, so with the host resolver every public-sites,
+    # apps and ingress probe reached Traefik straight over the tailnet and never
+    # exercised the relay, public DNS or the VCN rules — the monitor passed
+    # green for a path it was not testing. Probes in the internal and relay
+    # groups use literal IPs and are unaffected.
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
     volumes:
       - ./config.yaml:/config/config.yaml:ro
       - gatus-data:/data
