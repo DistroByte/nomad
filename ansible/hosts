@@ -32,5 +32,7 @@ worker.cloud
 worker.cloud
 
 [relay]
+# worker is deliberately absent: it hosts the control plane and serves
+# headscale on :443 directly, which would collide with the pass-through
+# listener. Adding it back needs the ssl_preread SNI split first.
 observability.cloud
-worker.cloud
