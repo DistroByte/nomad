@@ -85,6 +85,20 @@ EOF
 [log]
   level = "INFO"
 
+# No filePath, so this goes to stdout and `nomad alloc logs -job traefik`
+# surfaces it. ClientHost is the field that matters now that requests arrive
+# through the off-site relay: it should show the real client address rather
+# than the relay's 100.64.0.0/10 tailnet IP. If it ever shows the latter,
+# PROXY protocol has stopped being honoured on websecure-proxied.
+[accessLog]
+  format = "json"
+
+  [accessLog.fields.headers]
+    defaultMode = "drop"
+
+    [accessLog.fields.headers.names]
+      User-Agent = "keep"
+
 [metrics]
   [metrics.prometheus]
 
