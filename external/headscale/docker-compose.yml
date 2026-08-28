@@ -1,0 +1,50 @@
+# Control plane, deliberately off-cluster.
+#
+# It lives here rather than as a Nomad job because the tailnet must be
+# recoverable from cold: scheduling headscale on a node that needs the tailnet
+# to be scheduled is a deadlock, and that deadlock is exactly what stranded
+# every node when this ran at home behind DS-Lite.
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - headscale
+
+  headscale:
+    image: headscale/headscale:latest
+    container_name: headscale
+    restart: unless-stopped
+    # Config lives on the data volume, not bind-mounted read-only from the repo,
+    # because headplane edits it in place. The playbook seeds it only if absent,
+    # mirroring the init task in the Nomad job this replaces.
+    command: serve --config /var/lib/headscale/config.yaml
+    volumes:
+      - ./data:/var/lib/headscale
+    labels:
+      me.tale.headplane.target: headscale
+
+  headplane:
+    image: ghcr.io/tale/headplane:latest
+    container_name: headplane
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./headplane.yaml:/etc/headplane/config.yaml:ro
+      - ./data:/var/lib/headscale
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - headscale
+
+volumes:
+  caddy-data:
+  caddy-config:

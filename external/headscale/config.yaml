@@ -1,0 +1,43 @@
+# Serves TLS via Caddy in front, so headscale itself stays plain HTTP on the
+# compose network. server_url is unchanged from the Nomad deployment — it is
+# baked into every registered node, so changing it would strand them.
+server_url: https://headscale.dbyte.xyz
+listen_addr: 0.0.0.0:8080
+metrics_listen_addr: 127.0.0.1:9090
+
+private_key_path: /var/lib/headscale/private.key
+noise:
+  private_key_path: /var/lib/headscale/noise_private.key
+
+# Must match the migrated database — nodes already hold addresses from these
+# ranges and sequential allocation depends on them.
+prefixes:
+  v4: 100.64.0.0/10
+  v6: fd7a:115c:a1e0::/48
+  allocation: sequential
+
+derp:
+  server:
+    enabled: false
+  urls:
+    - https://controlplane.tailscale.com/derpmap/default
+  auto_update_enabled: true
+  update_frequency: 24h
+
+dns:
+  magic_dns: true
+  base_domain: ts.dbyte.xyz
+  nameservers:
+    global:
+      - 192.168.0.5
+
+log:
+  level: info
+
+database:
+  type: sqlite
+  sqlite:
+    path: /var/lib/headscale/db.sqlite
+
+policy:
+  mode: database

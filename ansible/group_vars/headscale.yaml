@@ -1,0 +1,12 @@
+---
+# Config for the [headscale] group — the off-cluster Tailscale control plane.
+#
+# Secrets live in ansible-vault. Add to group_vars/all.yaml, e.g.:
+#   ansible-vault encrypt_string "$(openssl rand -hex 32)" \
+#     --name vault_headplane_cookie_secret >> ansible/group_vars/all.yaml
+#
+# To keep existing headplane sessions valid, reuse the value currently in
+# Consul KV at tailscale/headplane/secret rather than generating a new one.
+
+headscale_deploy_dir: /opt/headscale
+headplane_cookie_secret: "{{ vault_headplane_cookie_secret }}"
