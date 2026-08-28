@@ -1,0 +1,140 @@
+---
+# Deploys the off-site L4 ingress relay.
+#
+# Home broadband is DS-Lite, so the router holds no public IPv4 and inbound
+# connections cannot be forwarded to the LAN at any price. These hosts own the
+# public IPv4 the world resolves to; nginx's stream module passes TCP/UDP
+# through to Traefik on hermes over the tailnet. TLS is still terminated on
+# hermes, so nothing about the existing certificate setup changes.
+#
+# Prerequisites:
+#   1. The host is in the [relay] and [tailscale] inventory groups (ansible/hosts).
+#   2. tailscale.yaml has been run against it and hermes' route is approved, so
+#      the relay can reach hermes over the tailnet (see docs/Headscale.md).
+#   3. Traefik exposes the websecure-proxied entrypoint on :8443 (jobs/traefik.hcl).
+#   4. The Oracle VCN security list / NSG allows ingress on 80/tcp, 443/tcp and
+#      64738 tcp+udp. This cannot be done from here — Oracle's cloud firewall is
+#      separate from the host firewall, and both must allow the traffic.
+#
+# Deploy:
+#   ansible-playbook -i ansible/hosts ansible/playbooks/relay.yaml
+- name: Deploy L4 ingress relay
+  hosts: relay
+  become: true
+  gather_subset:
+    - '!hardware'
+
+  tasks:
+    - name: Preseed iptables-persistent so installing it stays non-interactive
+      ansible.builtin.debconf:
+        name: iptables-persistent
+        question: "{{ item }}"
+        vtype: boolean
+        value: "false"
+      loop:
+        - iptables-persistent/autosave_v4
+        - iptables-persistent/autosave_v6
+
+    - name: Install nginx with the stream module
+      ansible.builtin.apt:
+        name:
+          - nginx
+          - libnginx-mod-stream
+          - iptables-persistent
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Discover the upstream tailnet address
+      ansible.builtin.command: "tailscale ip -4 {{ relay_upstream_node }}"
+      register: relay_upstream_lookup
+      changed_when: false
+      when: not relay_upstream_ip
+
+    - name: Set the upstream address
+      ansible.builtin.set_fact:
+        relay_upstream_ip: "{{ relay_upstream_lookup.stdout_lines[0] | trim }}"
+      when: not relay_upstream_ip
+
+    - name: Remove the default nginx site
+      # It listens on :80 in the http context and would collide with the
+      # stream listener below, leaving nginx unable to start.
+      ansible.builtin.file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+      register: relay_default_site
+
+    - name: Ensure the stream config directory exists
+      ansible.builtin.file:
+        path: /etc/nginx/stream-enabled
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Include the stream config from nginx.conf
+      # stream {} is a top-level context, so it cannot live under conf.d/ or
+      # sites-enabled/ — both of those are included inside http {}.
+      ansible.builtin.blockinfile:
+        path: /etc/nginx/nginx.conf
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - stream relay"
+        block: |
+          include /etc/nginx/stream-enabled/*.conf;
+      register: relay_include
+
+    - name: Render the stream relay config
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/templates/relay/stream.conf.j2"
+        dest: /etc/nginx/stream-enabled/relay.conf
+        owner: root
+        group: root
+        mode: "0644"
+        backup: true
+      register: relay_config
+
+    - name: Allow relay ports through the host firewall
+      ansible.builtin.iptables:
+        chain: INPUT
+        protocol: "{{ item.protocol }}"
+        destination_port: "{{ item.port }}"
+        jump: ACCEPT
+        action: insert
+        comment: "relay: {{ item.name }}"
+      loop:
+        - name: http
+          protocol: tcp
+          port: "80"
+        - name: https
+          protocol: tcp
+          port: "443"
+        - name: voice-tcp
+          protocol: tcp
+          port: "{{ relay_upstream_voice_port }}"
+        - name: voice-udp
+          protocol: udp
+          port: "{{ relay_upstream_voice_port }}"
+      register: relay_firewall
+
+    - name: Persist the firewall rules  # noqa: no-handler
+      # Deliberately a conditional task rather than a handler: handlers only
+      # fire at the end of a play, so a later failure would leave the running
+      # ruleset and the saved one out of step.
+      ansible.builtin.command: netfilter-persistent save
+      when: relay_firewall.changed
+      changed_when: true
+
+    - name: Validate the nginx configuration
+      ansible.builtin.command: nginx -t
+      changed_when: false
+
+    - name: Start nginx
+      ansible.builtin.systemd_service:
+        name: nginx
+        state: started
+        enabled: true
+
+    - name: Reload nginx
+      ansible.builtin.systemd_service:
+        name: nginx
+        state: reloaded
+      when: relay_config.changed or relay_include.changed or relay_default_site.changed

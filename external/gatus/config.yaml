@@ -267,6 +267,56 @@ endpoints:
     alerts:
       - type: ntfy
 
+  # The relays hold the public IPv4 that DNS points at. These check each one's
+  # listeners individually; the public-sites group above covers the end-to-end
+  # path through whichever relay DNS hands out, so a failure here localises it.
+  - name: relay-observability-https
+    group: relay
+    url: "tcp://${RELAY_OBSERVABILITY_HOST}:443"
+    interval: 60s
+    conditions:
+      - "[CONNECTED] == true"
+    alerts:
+      - type: ntfy
+
+  - name: relay-observability-voice
+    group: relay
+    url: "tcp://${RELAY_OBSERVABILITY_HOST}:64738"
+    interval: 120s
+    conditions:
+      - "[CONNECTED] == true"
+    alerts:
+      - type: ntfy
+
+  - name: relay-worker-https
+    group: relay
+    url: "tcp://${RELAY_WORKER_HOST}:443"
+    interval: 60s
+    conditions:
+      - "[CONNECTED] == true"
+    alerts:
+      - type: ntfy
+
+  - name: relay-worker-voice
+    group: relay
+    url: "tcp://${RELAY_WORKER_HOST}:64738"
+    interval: 120s
+    conditions:
+      - "[CONNECTED] == true"
+    alerts:
+      - type: ntfy
+
+  # The upstream the relays forward HTTPS to. Checked from the tailnet side so a
+  # relay outage and a Traefik outage do not look alike.
+  - name: traefik-proxied-entrypoint
+    group: internal
+    url: "tcp://192.168.0.4:8443"
+    interval: 60s
+    conditions:
+      - "[CONNECTED] == true"
+    alerts:
+      - type: ntfy
+
 external-endpoints:
   - name: heartbeat
     group: core

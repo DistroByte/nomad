@@ -18,6 +18,10 @@ job "traefik" {
       port "https" {
         static = 443
       }
+
+      port "https_proxied" {
+        static = 8443
+      }
       port "admin" {
         static = 8081
       }
@@ -126,6 +130,43 @@ EOF
       sans = ["*.crazybitta.biz"]
 
     [[entryPoints.websecure.http.tls.domains]]
+      main = "nicecocks.biz"
+      sans = ["*.nicecocks.biz"]
+
+  # Ingress from the off-site relays. They pass TCP through at L4 and prepend a
+  # PROXY protocol header, so the real client address survives; without this
+  # entrypoint every request would appear to come from the relay's tailnet IP.
+  # asDefault keeps existing routers serving here with no per-service changes.
+  [entryPoints.websecure-proxied]
+    address = ":8443"
+    asDefault = true
+
+    [entryPoints.websecure-proxied.proxyProtocol]
+      trustedIPs = ["100.64.0.0/10"]
+
+    [entryPoints.websecure-proxied.forwardedHeaders]
+      trustedIPs = ["100.64.0.0/10"]
+
+    [entryPoints.websecure-proxied.http.tls]
+      certresolver = "cloudflare"
+
+    [[entryPoints.websecure-proxied.http.tls.domains]]
+      main = "james-hackett.ie"
+      sans = ["*.james-hackett.ie"]
+
+    [[entryPoints.websecure-proxied.http.tls.domains]]
+      main = "dbyte.xyz"
+      sans = ["*.dbyte.xyz"]
+
+    [[entryPoints.websecure-proxied.http.tls.domains]]
+      main = "ihatenixos.org"
+      sans = ["*.ihatenixos.org"]
+
+    [[entryPoints.websecure-proxied.http.tls.domains]]
+      main = "crazybitta.biz"
+      sans = ["*.crazybitta.biz"]
+
+    [[entryPoints.websecure-proxied.http.tls.domains]]
       main = "nicecocks.biz"
       sans = ["*.nicecocks.biz"]
 
