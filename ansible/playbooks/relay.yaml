@@ -25,6 +25,21 @@
     - '!hardware'
 
   tasks:
+    - name: Check Tailscale is usable
+      ansible.builtin.command: tailscale status --json
+      register: relay_tailscale
+      changed_when: false
+      failed_when: false
+
+    - name: Fail if the tailnet is unavailable
+      ansible.builtin.fail:
+        msg: >-
+          Tailscale is not usable on this host (rc={{ relay_tailscale.rc }}).
+          The relay reaches {{ relay_upstream_node }} over the tailnet and
+          cannot work without it — run ansible/playbooks/tailscale.yaml against
+          this host first, and approve its routes in headscale.
+      when: relay_tailscale.rc != 0
+
     - name: Preseed iptables-persistent so installing it stays non-interactive
       ansible.builtin.debconf:
         name: iptables-persistent
@@ -44,21 +59,6 @@
         state: present
         update_cache: true
         cache_valid_time: 3600
-
-    - name: Check Tailscale is usable
-      ansible.builtin.command: tailscale status --json
-      register: relay_tailscale
-      changed_when: false
-      failed_when: false
-
-    - name: Fail if the tailnet is unavailable
-      ansible.builtin.fail:
-        msg: >-
-          Tailscale is not usable on this host (rc={{ relay_tailscale.rc }}).
-          The relay reaches {{ relay_upstream_node }} over the tailnet and
-          cannot work without it — run ansible/playbooks/tailscale.yaml against
-          this host first, and approve its routes in headscale.
-      when: relay_tailscale.rc != 0
 
     - name: Discover the upstream tailnet address
       ansible.builtin.command: "tailscale ip -4 {{ relay_upstream_node }}"
