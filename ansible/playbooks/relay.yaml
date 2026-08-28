@@ -45,6 +45,21 @@
         update_cache: true
         cache_valid_time: 3600
 
+    - name: Check Tailscale is usable
+      ansible.builtin.command: tailscale status --json
+      register: relay_tailscale
+      changed_when: false
+      failed_when: false
+
+    - name: Fail if the tailnet is unavailable
+      ansible.builtin.fail:
+        msg: >-
+          Tailscale is not usable on this host (rc={{ relay_tailscale.rc }}).
+          The relay reaches {{ relay_upstream_node }} over the tailnet and
+          cannot work without it — run ansible/playbooks/tailscale.yaml against
+          this host first, and approve its routes in headscale.
+      when: relay_tailscale.rc != 0
+
     - name: Discover the upstream tailnet address
       ansible.builtin.command: "tailscale ip -4 {{ relay_upstream_node }}"
       register: relay_upstream_lookup
@@ -133,8 +148,19 @@
         state: started
         enabled: true
 
-    - name: Reload nginx
+    - name: Restart nginx when the config shape changed
+      # Removing the default site moves :80 from the http context to the stream
+      # context. A reload does not reliably rebind across that change, so the
+      # first deploy needs a full restart.
+      ansible.builtin.systemd_service:
+        name: nginx
+        state: restarted
+      when: relay_include.changed or relay_default_site.changed
+
+    - name: Reload nginx when only the relay config changed
       ansible.builtin.systemd_service:
         name: nginx
         state: reloaded
-      when: relay_config.changed or relay_include.changed or relay_default_site.changed
+      when:
+        - relay_config.changed
+        - not (relay_include.changed or relay_default_site.changed)
