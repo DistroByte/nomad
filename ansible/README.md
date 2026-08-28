@@ -101,3 +101,69 @@ You can also pre-unlock and export the session to avoid the prompt:
 export BW_SESSION=$(bw unlock --raw)
 ansible-playbook -i ansible/hosts ansible/playbooks/configure-nomad-consul.yaml
 ```
+
+### `relay.yaml`
+
+Deploys the off-site L4 ingress relay to the `[relay]` group.
+
+Home broadband is DS-Lite, so the router has no public IPv4 and inbound
+connections cannot be forwarded to the LAN at all. The relays hold the public
+IPv4 that DNS points at and pass TCP/UDP through to Traefik on hermes over the
+tailnet. TLS is still terminated on hermes, so certificates and ACME are
+untouched.
+
+HTTPS carries a PROXY protocol header into Traefik's `websecure-proxied`
+entrypoint (`:8443`) so the real client address survives the extra hop. HTTP and
+Mumble pass through unwrapped.
+
+#### Variables
+
+| Variable                    | Description                                        | Default          |
+| --------------------------- | -------------------------------------------------- | ---------------- |
+| `relay_upstream_node`       | Tailnet node running Traefik                       | `hermes`         |
+| `relay_upstream_ip`         | Upstream tailnet IPv4; empty = discover at runtime | `""`             |
+| `relay_upstream_https_port` | Traefik PROXY-protocol entrypoint                  | `8443`           |
+| `relay_upstream_http_port`  | Traefik plain HTTP entrypoint                      | `80`             |
+| `relay_upstream_voice_port` | Mumble TCP+UDP port                                | `64738`          |
+| `relay_tailnet_cidr`        | Range Traefik trusts PROXY headers from            | `100.64.0.0/10`  |
+
+#### Before first run
+
+The Oracle VCN security list (or NSG) must allow ingress on `80/tcp`,
+`443/tcp` and `64738` tcp+udp. Oracle's cloud firewall is separate from the host
+firewall this playbook configures, and traffic must pass both.
+
+#### Example
+
+```bash
+ansible-playbook -i ansible/hosts ansible/playbooks/relay.yaml
+```
+
+### `headscale.yaml`
+
+Deploys the headscale + headplane control plane to the `[headscale]` group, as a
+Docker Compose stack with Caddy terminating TLS.
+
+It runs off-cluster on purpose. Previously it was a Nomad job on hermes behind
+Traefik, which meant reaching it required a working tailnet *and* a working home
+connection — when the home line moved to DS-Lite and lost its public IPv4, every
+node was stranded with no way to re-register. See [docs/Headscale.md](../docs/Headscale.md).
+
+#### Variables
+
+| Variable                        | Description                             | Default          |
+| ------------------------------- | --------------------------------------- | ---------------- |
+| `headscale_deploy_dir`          | Deploy directory on the host            | `/opt/headscale` |
+| `vault_headplane_cookie_secret` | headplane session secret (ansible-vault) | —                |
+
+#### Before first run
+
+`headscale.dbyte.xyz` and `headplane.dbyte.xyz` must already resolve to the host
+— Caddy issues certificates over HTTP-01 and fails otherwise — and state must be
+migrated from the old CSI volume. The playbook refuses to start without it.
+
+#### Example
+
+```bash
+ansible-playbook -i ansible/hosts ansible/playbooks/headscale.yaml
+```
