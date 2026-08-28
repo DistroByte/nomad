@@ -6,8 +6,12 @@ hermes ansible_host=192.168.0.4
 ansible_user=distro
 
 [cloud]
-observability.cloud
-worker.cloud
+# Pinned to their static Oracle addresses. `.cloud` is a real public TLD, so
+# these names only reach the right hosts where Pi-hole answers for them —
+# without ansible_host an off-LAN run would connect to a stranger's server and,
+# given StrictHostKeyChecking=accept-new, silently trust it.
+observability.cloud ansible_host=132.226.210.138
+worker.cloud        ansible_host=141.147.74.4
 
 [cloud:vars]
 ansible_user=ubuntu
@@ -21,5 +25,12 @@ observability.cloud
 
 [tailscale]
 hermes
+observability.cloud
+worker.cloud
+
+[headscale]
+worker.cloud
+
+[relay]
 observability.cloud
 worker.cloud
