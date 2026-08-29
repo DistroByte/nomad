@@ -89,10 +89,11 @@ endpoints:
 
   - name: headscale
     group: ingress
-    url: "https://headscale.dbyte.xyz"
+    url: "https://headscale.dbyte.xyz/health"
     interval: 30s
     conditions:
-      - "[STATUS] == any(200, 204, 301, 302, 404)"
+      - "[STATUS] == 200"
+      - "[BODY].status == pass"
       - "[CERTIFICATE_EXPIRATION] > 168h"
     alerts:
       - type: ntfy
@@ -261,6 +262,38 @@ endpoints:
   - name: synology-dsm
     group: internal
     url: "tcp://192.168.0.5:5001"
+    interval: 60s
+    conditions:
+      - "[CONNECTED] == true"
+    alerts:
+      - type: ntfy
+
+  # The relays hold the public IPv4 that DNS points at. These check each one's
+  # listeners individually; the public-sites group above covers the end-to-end
+  # path through whichever relay DNS hands out, so a failure here localises it.
+  - name: relay-observability-https
+    group: relay
+    url: "tcp://${RELAY_OBSERVABILITY_HOST}:443"
+    interval: 60s
+    conditions:
+      - "[CONNECTED] == true"
+    alerts:
+      - type: ntfy
+
+  - name: relay-observability-voice
+    group: relay
+    url: "tcp://${RELAY_OBSERVABILITY_HOST}:64738"
+    interval: 120s
+    conditions:
+      - "[CONNECTED] == true"
+    alerts:
+      - type: ntfy
+
+  # The upstream the relays forward HTTPS to. Checked from the tailnet side so a
+  # relay outage and a Traefik outage do not look alike.
+  - name: traefik-proxied-entrypoint
+    group: internal
+    url: "tcp://192.168.0.4:8443"
     interval: 60s
     conditions:
       - "[CONNECTED] == true"

@@ -18,6 +18,10 @@ job "traefik" {
       port "https" {
         static = 443
       }
+
+      port "https_proxied" {
+        static = 8443
+      }
       port "admin" {
         static = 8081
       }
@@ -81,6 +85,20 @@ EOF
 [log]
   level = "INFO"
 
+# No filePath, so this goes to stdout and `nomad alloc logs -job traefik`
+# surfaces it. ClientHost is the field that matters now that requests arrive
+# through the off-site relay: it should show the real client address rather
+# than the relay's 100.64.0.0/10 tailnet IP. If it ever shows the latter,
+# PROXY protocol has stopped being honoured on websecure-proxied.
+[accessLog]
+  format = "json"
+
+  [accessLog.fields.headers]
+    defaultMode = "drop"
+
+    [accessLog.fields.headers.names]
+      User-Agent = "keep"
+
 [metrics]
   [metrics.prometheus]
 
@@ -126,6 +144,43 @@ EOF
       sans = ["*.crazybitta.biz"]
 
     [[entryPoints.websecure.http.tls.domains]]
+      main = "nicecocks.biz"
+      sans = ["*.nicecocks.biz"]
+
+  # Ingress from the off-site relays. They pass TCP through at L4 and prepend a
+  # PROXY protocol header, so the real client address survives; without this
+  # entrypoint every request would appear to come from the relay's tailnet IP.
+  # asDefault keeps existing routers serving here with no per-service changes.
+  [entryPoints.websecure-proxied]
+    address = ":8443"
+    asDefault = true
+
+    [entryPoints.websecure-proxied.proxyProtocol]
+      trustedIPs = ["100.64.0.0/10"]
+
+    [entryPoints.websecure-proxied.forwardedHeaders]
+      trustedIPs = ["100.64.0.0/10"]
+
+    [entryPoints.websecure-proxied.http.tls]
+      certresolver = "cloudflare"
+
+    [[entryPoints.websecure-proxied.http.tls.domains]]
+      main = "james-hackett.ie"
+      sans = ["*.james-hackett.ie"]
+
+    [[entryPoints.websecure-proxied.http.tls.domains]]
+      main = "dbyte.xyz"
+      sans = ["*.dbyte.xyz"]
+
+    [[entryPoints.websecure-proxied.http.tls.domains]]
+      main = "ihatenixos.org"
+      sans = ["*.ihatenixos.org"]
+
+    [[entryPoints.websecure-proxied.http.tls.domains]]
+      main = "crazybitta.biz"
+      sans = ["*.crazybitta.biz"]
+
+    [[entryPoints.websecure-proxied.http.tls.domains]]
       main = "nicecocks.biz"
       sans = ["*.nicecocks.biz"]
 
@@ -204,6 +259,11 @@ EOF
 
 [http.middlewares.mediashare-auth.basicAuth]
   usersFile = "/etc/traefik/mediashare.htpasswd"
+
+# For backends serving their own self-signed certificate — the UniFi
+# controller's UI. Referenced from a service tag as `insecure@file`.
+[http.serversTransports.insecure]
+  insecureSkipVerify = true
 EOH
 
         destination = "local/traefik_dynamic.toml"

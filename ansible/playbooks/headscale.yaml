@@ -1,0 +1,146 @@
+---
+# Deploys headscale + headplane off-cluster via Docker Compose.
+#
+# The control plane deliberately does not run as a Nomad job. It previously ran
+# on hermes behind Traefik, which meant reaching it required a working tailnet
+# and a working home connection — when the home line moved to DS-Lite and lost
+# its public IPv4, every node was stranded with no way to re-register. Running
+# it on a host with a real public address makes the tailnet recoverable from
+# cold.
+#
+# Prerequisites:
+#   1. The host is in the [headscale] inventory group (ansible/hosts).
+#   2. headscale.dbyte.xyz and headplane.dbyte.xyz both resolve to this host —
+#      Caddy issues certificates over HTTP-01 and will fail otherwise.
+#   3. vault_headplane_cookie_secret is in ansible-vault
+#      (see ansible/group_vars/headscale.yaml).
+#   4. The Oracle VCN security list allows ingress on 80/tcp and 443/tcp.
+#   5. State has been migrated from the old CSI volume — see
+#      docs/Headscale.md. Without it every node must re-register by hand.
+#
+# Deploy:
+#   ansible-playbook -i ansible/hosts ansible/playbooks/headscale.yaml
+- name: Deploy headscale control plane
+  hosts: headscale
+  become: true
+  gather_subset:
+    - '!hardware'
+
+  tasks:
+    - name: Preseed iptables-persistent so installing it stays non-interactive
+      ansible.builtin.debconf:
+        name: iptables-persistent
+        question: "{{ item }}"
+        vtype: boolean
+        value: "false"
+      loop:
+        - iptables-persistent/autosave_v4
+        - iptables-persistent/autosave_v6
+
+    - name: Install iptables-persistent
+      ansible.builtin.apt:
+        name: iptables-persistent
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Install Docker Engine  # noqa: command-instead-of-module
+      # pipefail matters here: without it a failed download still reports
+      # success, because the exit status comes from `sh` reading empty input.
+      ansible.builtin.shell:
+        cmd: set -o pipefail && curl -fsSL https://get.docker.com | sh
+        executable: /bin/bash
+        creates: /usr/bin/docker
+
+    - name: Ensure deploy directory exists
+      ansible.builtin.file:
+        path: "{{ headscale_deploy_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Ensure the state directory exists
+      ansible.builtin.file:
+        path: "{{ headscale_deploy_dir }}/data"
+        state: directory
+        owner: root
+        group: root
+        mode: "0750"
+
+    - name: Sync compose + service configs
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../../external/headscale/{{ item }}"
+        dest: "{{ headscale_deploy_dir }}/{{ item }}"
+        owner: root
+        group: root
+        mode: "0644"
+      loop:
+        - docker-compose.yml
+        - Caddyfile
+        - headplane.yaml
+
+    - name: Seed headscale config if the volume does not already have one
+      # force: false mirrors the init task in the Nomad job this replaces —
+      # headplane edits this file in place, and those edits must survive a
+      # redeploy.
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../../external/headscale/config.yaml"
+        dest: "{{ headscale_deploy_dir }}/data/config.yaml"
+        owner: root
+        group: root
+        mode: "0644"
+        force: false
+
+    - name: Render .env with secrets
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/templates/headscale/env.j2"
+        dest: "{{ headscale_deploy_dir }}/.env"
+        owner: root
+        group: root
+        mode: "0600"
+
+    - name: Warn if migrated state is missing
+      # Starting without these makes headscale generate a fresh identity, which
+      # silently orphans every registered node.
+      ansible.builtin.stat:
+        path: "{{ headscale_deploy_dir }}/data/{{ item }}"
+      register: headscale_state
+      loop:
+        - db.sqlite
+        - noise_private.key
+
+    - name: Fail if state has not been migrated
+      ansible.builtin.fail:
+        msg: >-
+          {{ item.item }} is missing from {{ headscale_deploy_dir }}/data.
+          Migrate state from the old CSI volume first (see docs/Headscale.md),
+          or every node will have to re-register by hand.
+      when: not item.stat.exists
+      loop: "{{ headscale_state.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Allow HTTP and HTTPS through the host firewall
+      ansible.builtin.iptables:
+        chain: INPUT
+        protocol: tcp
+        destination_port: "{{ item }}"
+        jump: ACCEPT
+        action: insert
+        comment: "headscale: {{ item }}"
+      loop:
+        - "80"
+        - "443"
+      register: headscale_firewall
+
+    - name: Persist the firewall rules  # noqa: no-handler
+      ansible.builtin.command: netfilter-persistent save
+      when: headscale_firewall.changed
+      changed_when: true
+
+    - name: Start the stack
+      community.docker.docker_compose_v2:
+        project_src: "{{ headscale_deploy_dir }}"
+        state: present
+        pull: always

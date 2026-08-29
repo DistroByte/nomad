@@ -1,0 +1,15 @@
+# Caddy owns :443 here rather than headscale's built-in ACME, so that headplane
+# can share the address. Certificates are issued over HTTP-01 on :80 — this host
+# is not a relay, so both ports are free.
+headscale.dbyte.xyz {
+	reverse_proxy headscale:8080 {
+		# Tailscale clients hold long-lived streaming connections for the
+		# netmap; buffering them delays every peer update.
+		flush_interval -1
+	}
+}
+
+headplane.dbyte.xyz {
+	redir / /admin
+	reverse_proxy headplane:3000
+}

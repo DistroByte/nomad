@@ -1,0 +1,25 @@
+---
+# Config for the [relay] group — the off-site L4 ingress relays.
+#
+# Home broadband is DS-Lite: the router has no public IPv4 (its UPnP
+# WANIPConnection reports 0.0.0.0 / Disconnected), so inbound IPv4 cannot be
+# forwarded at all. These hosts hold the public IPv4 that the world connects to
+# and pass traffic through to Traefik on hermes over the tailnet.
+
+# Tailnet node running Traefik. Its tailnet IPv4 is discovered at run time
+# unless relay_upstream_ip is set explicitly.
+relay_upstream_node: hermes
+relay_upstream_ip: ""
+
+# Ports on the upstream. 8443 is Traefik's PROXY-protocol entrypoint
+# (websecure-proxied); 80 and 64738 are its existing plain entrypoints.
+relay_upstream_https_port: 8443
+relay_upstream_http_port: 80
+relay_upstream_voice_port: 64738
+
+# Tailscale hands out addresses from 100.64.0.0/10. Traefik only honours PROXY
+# protocol headers from this range, so it must match on both ends.
+relay_tailnet_cidr: 100.64.0.0/10
+
+relay_https_timeout: 300s
+relay_voice_timeout: 15s

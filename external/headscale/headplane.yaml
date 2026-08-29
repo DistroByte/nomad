@@ -1,0 +1,17 @@
+# cookie_secret comes from the environment (HEADPLANE_SERVER__COOKIE_SECRET),
+# rendered into .env by ansible/playbooks/headscale.yaml from ansible-vault.
+server:
+  host: "0.0.0.0"
+  port: 3000
+  base_url: "https://headplane.dbyte.xyz"
+  cookie_secure: true
+  data_path: "/var/lib/headscale/headplane"
+
+headscale:
+  url: "http://headscale:8080"
+  config_path: "/var/lib/headscale/config.yaml"
+
+integration:
+  docker:
+    enabled: true
+    socket: "unix:///var/run/docker.sock"

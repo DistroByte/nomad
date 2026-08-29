@@ -13,3 +13,7 @@ gatus_deploy_dir: /opt/gatus
 gatus_ntfy_topic: "{{ vault_gatus_ntfy_topic }}"
 gatus_ntfy_token: "{{ vault_gatus_ntfy_token | default('') }}"
 gatus_heartbeat_token: "{{ vault_gatus_heartbeat_token }}"
+
+# Public IPv4 of the relay, probed directly so a relay outage is
+# distinguishable from a Traefik outage.
+gatus_relay_observability_host: "132.226.210.138"
