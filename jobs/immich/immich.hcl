@@ -74,7 +74,7 @@ EOH
 
       resources {
         memory = 900
-        cpu    = 512
+        cpu    = 256
       }
 
       volume_mount {
@@ -173,7 +173,7 @@ EOH
 
       resources {
         memory = 3500
-        cpu    = 1600
+        cpu    = 600
       }
 
       volume_mount {
@@ -255,7 +255,7 @@ EOH
 
       resources {
         memory = 3172
-        cpu    = 1500
+        cpu    = 500
       }
     }
   }
@@ -371,7 +371,7 @@ EOH
       }
 
       resources {
-        cpu    = 1000
+        cpu    = 400
         memory = 1024
       }
     }
@@ -464,7 +464,7 @@ EOH
 
       resources {
         memory = 200
-        cpu    = 300
+        cpu    = 150
       }
     }
 
@@ -575,7 +575,7 @@ EOH
       }
 
       resources {
-        cpu    = 200
+        cpu    = 100
         memory = 256
       }
     }
@@ -615,7 +615,7 @@ EOH
       }
 
       resources {
-        cpu    = 500
+        cpu    = 200
         memory = 512
       }
     }
