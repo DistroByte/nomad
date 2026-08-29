@@ -1,3 +1,8 @@
+# Stopgap. Ubiquiti is deprecating the standalone Network Application in favour
+# of UniFi OS Server, which cannot run as a container — it needs systemd as PID 1
+# and host services for device discovery. LinuxServer maintain this image only
+# while Ubiquiti keeps publishing the install packages. The exit is a UniFi
+# gateway, which runs UniFi OS natively and hosts the controller itself.
 job "unifi" {
   datacenters = ["dc1"]
   type        = "service"
