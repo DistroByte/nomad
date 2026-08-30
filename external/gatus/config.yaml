@@ -13,7 +13,7 @@ alerting:
     url: "https://ntfy.sh"
     topic: "${NTFY_TOPIC}"
     priority: 4
-    # token: "${NTFY_TOKEN}"   # uncomment for a protected/self-hosted ntfy
+    token: "${NTFY_TOKEN}"   # uncomment for a protected/self-hosted ntfy
     default-alert:
       enabled: true
       failure-threshold: 3

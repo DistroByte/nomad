@@ -84,6 +84,8 @@ standard_urls:
   - service: "drive"
     url: "https://drive.dbyte.xyz"
     icon: "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/refs/heads/main/png/synology-drive.png"
+  - service: "gatus"
+    url: "http://observability.ts.dbyte.xyz:8080/"
   - service: "jellyfin"
     url: "https://video.dbyte.xyz"
   - service: "ghost"
