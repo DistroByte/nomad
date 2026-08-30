@@ -99,7 +99,7 @@ job "photo" {
       shutdown_delay = "5s"
 
       config {
-        image      = "ghost:6.54.0"
+        image      = "ghost:6.61.0"
         force_pull = true
         ports      = ["http"]
         entrypoint = ["/local/ghost-with-tinybird.sh"]
