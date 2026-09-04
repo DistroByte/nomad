@@ -44,64 +44,114 @@ identity once the control plane returns, provided the SQLite database and
 
 ## Initial Rollout
 
+The control plane is a Docker Compose stack on `worker` (141.147.74.4), so all
+headscale CLI calls go over SSH into that container. `--config` is not optional:
+without it the CLI logs `no config file found, using defaults` and operates
+against default paths rather than the real database.
+
 ```bash
-# 1. Provision the CSI volume
-nomad volume create jobs/headscale/headscale-data.csi.hcl
+# 1. Deploy headscale (Caddy + headscale + headplane)
+ansible-playbook -i ansible/hosts ansible/playbooks/headscale.yaml
 
-# 2. Deploy headscale
-nomad job run jobs/headscale/headscale.hcl
+# 2. Create a user
+ssh ubuntu@141.147.74.4 'sudo docker exec headscale headscale \
+  --config /var/lib/headscale/config.yaml users create distro'
 
-# 3. Create a user
-nomad alloc exec -task headscale -job headscale headscale users create distro
+# 3. Create a reusable pre-auth key
+ssh ubuntu@141.147.74.4 'sudo docker exec headscale headscale \
+  --config /var/lib/headscale/config.yaml preauthkeys create \
+  --user 1 --reusable --expiration 90d'
 
-# 4. Create a reusable pre-auth key
-nomad alloc exec -task headscale -job headscale headscale preauthkeys create \
-  --user 1 --reusable --expiration 90d
-
-# 5. Store the key in Ansible vault
+# 4. Store the key in Ansible vault
 ansible-vault encrypt_string '<key>' --name vault_tailscale_authkey \
   >> ansible/group_vars/all.yaml
 
-# 6. Install Tailscale on homelab nodes
+# 5. Install Tailscale on homelab nodes
 ansible-playbook -i ansible/hosts ansible/playbooks/tailscale.yaml
 
-# 7. Approve routes for each node (see below)
+# 6. Approve routes for each node (see below)
 ```
 
 ## Approving Routes for a Node
 
 After a node connects, its advertised routes must be approved server-side. Routes persist in the SQLite database.
 
+Nothing automates this. No playbook approves routes, and `tailscale_args` in
+`ansible/group_vars/tailscale.yaml` carries `--reset`, so a re-register can
+leave a route advertised but unapproved.
+
 ```bash
 # List what a node is advertising
-nomad alloc exec -task headscale -job headscale headscale nodes list-routes --identifier <id>
+ssh ubuntu@141.147.74.4 'sudo docker exec headscale headscale \
+  --config /var/lib/headscale/config.yaml nodes list-routes --identifier <id>'
 
 # Approve subnet route + exit node routes (IPv4 and IPv6)
-nomad alloc exec -task headscale -job headscale headscale nodes approve-routes \
+ssh ubuntu@141.147.74.4 'sudo docker exec headscale headscale \
+  --config /var/lib/headscale/config.yaml nodes approve-routes \
   --identifier <id> \
-  --routes 192.168.0.0/24,0.0.0.0/0,::/0
+  --routes 192.168.0.0/24,0.0.0.0/0,::/0'
 ```
+
+`approve-routes` sets the **full** approved list rather than adding to it — pass
+every route the node should serve, or the omitted ones are revoked. Approving
+just `192.168.0.0/24` on hermes would silently drop its exit node.
+
+Read the output columns carefully. `Available` is what the node advertises;
+`Approved` is what you have allowed; `Serving (Primary)` is what is actually
+carrying traffic. A route in `Available` but absent from `Approved` is inert:
+
+```
+ID | Hostname | Approved        | Available                       | Serving (Primary)
+1  | hermes   | 0.0.0.0/0, ::/0 | 0.0.0.0/0, ::/0, 192.168.0.0/24 | 0.0.0.0/0, ::/0
+```
+
+That state breaks every tailnet client's DNS, because `dns.nameservers.global`
+in `external/headscale/config.yaml` is `192.168.0.5` — an address only reachable
+*through* that subnet route. It also blinds the Gatus `internal` check group,
+which reaches 192.168.0.0/24 the same way, so the failure does not alert.
 
 For a node that is only a subnet router (not an exit node), omit `0.0.0.0/0` and `::/0`.
 
 ## Useful Commands
 
+Define this once per shell so the commands below stay readable:
+
+```bash
+hs() {
+  ssh ubuntu@141.147.74.4 \
+    "sudo docker exec headscale headscale --config /var/lib/headscale/config.yaml $*"
+}
+```
+
 ```bash
 # List all nodes
-nomad alloc exec -task headscale -job headscale headscale nodes list
+hs nodes list
+
+# List routes across all nodes
+hs nodes list-routes
 
 # Expire (force re-auth) a node
-nomad alloc exec -task headscale -job headscale headscale nodes expire --identifier <id>
+hs nodes expire --identifier <id>
 
 # Delete a node
-nomad alloc exec -task headscale -job headscale headscale nodes delete --identifier <id>
+hs nodes delete --identifier <id>
 
 # List pre-auth keys (flag name varies by headscale version — check --help)
-nomad alloc exec -task headscale -job headscale headscale preauthkeys list
+hs preauthkeys list
 
 # Create a new pre-auth key
-nomad alloc exec -task headscale -job headscale headscale preauthkeys create \
-  --user 1 --reusable --expiration 90d
+hs preauthkeys create --user 1 --reusable --expiration 90d
+```
+
+`Connected: offline` in `nodes list` means the node has lost its **control**
+connection, not that it is unreachable. A node can show offline while still
+passing traffic over an established DERP path — during the September 2026
+outage hermes was `offline` for 26 hours while Traefik on it kept serving every
+public site through the relay. Confirm the data path separately before
+concluding a node is down:
+
+```bash
+ssh ubuntu@132.226.210.138 'tailscale ping -c 2 100.64.0.1'
 ```
 
 ## Migrating state to the off-cluster control plane

@@ -1,19 +1,30 @@
 ---
 # Installs Tailscale on all nomad nodes and connects them to headscale.
 #
+# The control plane runs off-cluster as a Docker Compose stack on worker
+# (141.147.74.4), so every headscale CLI call goes over SSH into that container
+# — not `nomad alloc exec`. See docs/Headscale.md.
+#
 # Prerequisites:
-#   1. headscale job is running at https://headscale.dbyte.xyz
+#   1. headscale is serving at https://headscale.dbyte.xyz (curl -sI .../health)
 #   2. A headscale user and reusable pre-auth key have been created:
-#        nomad alloc exec -job headscale headscale users create distro
-#        nomad alloc exec -job headscale headscale preauthkeys create \
-#          --user 1 --reusable --expiration 90d
+#        ssh ubuntu@141.147.74.4 'sudo docker exec headscale headscale \
+#          --config /var/lib/headscale/config.yaml users create distro'
+#        ssh ubuntu@141.147.74.4 'sudo docker exec headscale headscale \
+#          --config /var/lib/headscale/config.yaml preauthkeys create \
+#          --user 1 --reusable --expiration 90d'
 #   3. The key is stored in Ansible vault:
 #        ansible-vault encrypt_string '<key>' --name vault_tailscale_authkey \
 #          >> ansible/group_vars/all.yaml
 #
-# After running this playbook, approve the advertised subnet routes in headscale:
-#   nomad alloc exec -job headscale headscale nodes list-routes --identifier <id>
-#   nomad alloc exec -job headscale headscale nodes approve-routes --identifier <id> --routes 192.168.0.0/24,0.0.0.0/0,::/0
+# After running this playbook, approve the advertised subnet routes in headscale.
+# This is a MANUAL step — no playbook does it, and `tailscale_args` carries
+# --reset, so a re-register can leave routes advertised but unapproved:
+#   ssh ubuntu@141.147.74.4 'sudo docker exec headscale headscale \
+#     --config /var/lib/headscale/config.yaml nodes list-routes --identifier <id>'
+#   ssh ubuntu@141.147.74.4 'sudo docker exec headscale headscale \
+#     --config /var/lib/headscale/config.yaml nodes approve-routes \
+#     --identifier <id> --routes 192.168.0.0/24,0.0.0.0/0,::/0'
 - name: Install and connect Tailscale
   hosts: tailscale
   become: true
