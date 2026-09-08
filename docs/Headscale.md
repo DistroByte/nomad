@@ -163,6 +163,51 @@ which reaches 192.168.0.0/24 the same way, so the failure does not alert.
 
 For a node that is only a subnet router (not an exit node), omit `0.0.0.0/0` and `::/0`.
 
+## Workstations are not Ansible-managed
+
+`archdesktop` and `archlaptop` are not in the `[tailscale]` group in
+`ansible/hosts` — only the four servers (`hermes`, `zeus`,
+`observability.cloud`, `worker.cloud`) are. That means they never get the
+composed `tailscale_args` from `ansible/group_vars/tailscale.yaml`, and every
+manual `tailscale up` on them is easy to get wrong in a way that silently
+resets state rather than erroring:
+
+**If you ever run `tailscale up` without `--login-server`, tailscale switches
+back to the default coordination server and treats it as a new login.** That
+also drops `--operator` and `--accept-routes` on the resulting profile, even
+though those look like independent, persisted settings — they are, but only
+*within* a given login-server's profile. This is why re-running `tailscale up`
+on a workstation with a partial flag set looks like "settings won't stick":
+the profile itself got swapped out from under it, not the individual flags.
+
+Two ways to fix a workstation properly, instead of hand-typing flags each time:
+
+1. **Add it to Ansible** (`tailscale_operator` was added to
+   `group_vars/tailscale.yaml` for exactly this case). Add the host to
+   `[tailscale]` in `ansible/hosts`, set `tailscale_operator` in its
+   `host_vars`, and let `ansible/playbooks/tailscale.yaml` apply the same
+   composed `tailscale_args` the servers get — including the reusable
+   pre-auth key from vault. Consistent with everything else in this doc, but
+   requires the workstation to be SSH-reachable and pushed to like a server.
+2. **A local systemd oneshot unit** running the full flag set on boot, for a
+   box you don't want Ansible touching:
+   ```sh
+   #!/bin/sh
+   exec tailscale up \
+     --login-server=https://headscale.dbyte.xyz \
+     --operator=james \
+     --accept-routes \
+     --authkey=file:/etc/tailscale/authkey
+   ```
+   `systemctl enable` a oneshot unit with `After=tailscaled.service` that runs
+   this script. The auth key must be a **reusable** pre-auth key (see
+   `preauthkeys create --reusable` above) — a single-use key only works once,
+   and a workstation that keeps losing its control-plane connection needs to
+   be able to re-register without you generating a new key each time.
+
+Neither path is done for `archdesktop`/`archlaptop` yet — this section
+documents the gap, not a fix already applied.
+
 ## Useful Commands
 
 Define this once per shell so the commands below stay readable:

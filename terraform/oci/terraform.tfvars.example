@@ -7,5 +7,4 @@ route_table_ocid            = "ocid1.routetable.oc1..CHANGE-ME"
 worker_instance_ocid        = "ocid1.instance.oc1..CHANGE-ME"
 observability_instance_ocid = "ocid1.instance.oc1..CHANGE-ME"
 
-vcn_cidr      = "10.0.0.0/16"
-vcn_ipv6_cidr = "2603:c020:c014:4e00::/56"
+vcn_cidr = "10.0.0.0/16"

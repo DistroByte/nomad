@@ -33,8 +33,3 @@ variable "vcn_cidr" {
   type        = string
   description = "The VCN's IPv4 CIDR (console → VCN details), e.g. 10.0.0.0/16"
 }
-
-variable "vcn_ipv6_cidr" {
-  type        = string
-  description = "The VCN's IPv6 /56 as allocated by Oracle"
-}

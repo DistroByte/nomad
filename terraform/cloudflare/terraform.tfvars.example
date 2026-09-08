@@ -1,1 +1,6 @@
-headscale_record_id = "CHANGE-ME"
+# One entry per record referenced in records.tf, keyed by the name used in
+# each resource's import block — see records.tf for the full key list.
+record_ids = {
+  dbyte_apex = "CHANGE-ME"
+  # ...
+}
