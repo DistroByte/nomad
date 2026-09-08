@@ -22,9 +22,12 @@
     - '!hardware'
 
   tasks:
-    - name: Install Docker Engine
+    - name: Install Docker Engine  # noqa: command-instead-of-module
+      # pipefail matters here: without it a failed download still reports
+      # success, because the exit status comes from `sh` reading empty input.
       ansible.builtin.shell:
-        cmd: curl -fsSL https://get.docker.com | sh
+        cmd: set -o pipefail && curl -fsSL https://get.docker.com | sh
+        executable: /bin/bash
         creates: /usr/bin/docker
 
     - name: Discover Tailscale IPv4 to bind Gatus to
@@ -35,6 +38,12 @@
     - name: Bind Gatus to the tailnet IP
       ansible.builtin.set_fact:
         gatus_bind_addr: "{{ tailscale_ip.stdout_lines[0] | trim }}"
+
+    # Second bind on the VCN private address so worker's headscale-backup
+    # heartbeat reaches Gatus without touching the tailnet it protects.
+    - name: Bind Gatus to the VCN private IP as well
+      ansible.builtin.set_fact:
+        gatus_bind_addr_private: "{{ ansible_default_ipv4.address }}"
 
     - name: Ensure deploy directory exists
       ansible.builtin.file:

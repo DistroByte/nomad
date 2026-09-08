@@ -308,3 +308,37 @@ external-endpoints:
       interval: 10m
     alerts:
       - type: ntfy
+
+  # Backup freshness: each backup POSTs here only after it exits 0, so a
+  # missing beat means the backup did not complete. 26h tolerates daily jitter.
+  - name: offsite
+    group: backups
+    token: "${HEARTBEAT_TOKEN}"
+    heartbeat:
+      interval: 26h
+    alerts:
+      - type: ntfy
+
+  - name: vaultwarden
+    group: backups
+    token: "${HEARTBEAT_TOKEN}"
+    heartbeat:
+      interval: 26h
+    alerts:
+      - type: ntfy
+
+  - name: paperless
+    group: backups
+    token: "${HEARTBEAT_TOKEN}"
+    heartbeat:
+      interval: 26h
+    alerts:
+      - type: ntfy
+
+  - name: headscale
+    group: backups
+    token: "${HEARTBEAT_TOKEN}"
+    heartbeat:
+      interval: 26h
+    alerts:
+      - type: ntfy

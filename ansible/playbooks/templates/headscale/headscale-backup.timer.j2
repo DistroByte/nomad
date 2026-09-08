@@ -1,0 +1,11 @@
+# Managed by ansible/playbooks/headscale.yaml — do not edit on the host.
+[Unit]
+Description=Daily headscale state backup
+
+[Timer]
+OnCalendar=*-*-* 04:30:00
+RandomizedDelaySec=600
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,9 @@
+# Managed by ansible/playbooks/headscale.yaml — do not edit on the host.
+[Unit]
+Description=Ship headscale state offsite with restic
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart={{ headscale_backup_dir }}/backup.sh

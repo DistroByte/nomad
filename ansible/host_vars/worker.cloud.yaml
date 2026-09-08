@@ -1,0 +1,8 @@
+---
+# worker runs the control plane, so it takes neither DNS nor routes from the
+# tailnet it serves.
+tailscale_accept_dns: false
+tailscale_accept_routes: false
+
+# Second exit node, so observability is not a single point of failure.
+tailscale_exit_node: true

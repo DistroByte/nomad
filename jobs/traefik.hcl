@@ -48,11 +48,12 @@ job "traefik" {
     }
 
     task "traefik" {
-      driver = "docker"
+      driver         = "docker"
       shutdown_delay = "5s"
       config {
-        image        = "traefik:latest"
-        force_pull   = true
+        # Pinned: the ingress for every service must not change version as a
+        # side effect of a reschedule.
+        image        = "traefik:v3.7.12"
         network_mode = "host"
 
         volumes = [
@@ -104,8 +105,9 @@ EOF
 
 [api]
   dashboard = true
-  insecure = true
 
+# :8081 stays for /ping (Nomad service check + Gatus) and Prometheus metrics;
+# with insecure mode off it no longer serves the API or dashboard.
 [ping]
   entryPoint = "traefik"
 
@@ -256,6 +258,13 @@ EOF
 
 [[http.services.ghost-activitypub.loadBalancer.servers]]
   url = "https://ap.ghost.org"
+
+# Dashboard on the LAN/tailnet entrypoint only — never websecure-proxied, so it
+# is unreachable through the public relay path.
+[http.routers.traefik-dashboard]
+  rule = "Host(`traefik.dbyte.xyz`)"
+  service = "api@internal"
+  entryPoints = ["websecure"]
 
 [http.middlewares.mediashare-auth.basicAuth]
   usersFile = "/etc/traefik/mediashare.htpasswd"

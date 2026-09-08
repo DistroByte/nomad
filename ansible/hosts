@@ -21,7 +21,9 @@ observability.cloud
 
 [tailscale]
 hermes
+zeus
 observability.cloud
+worker.cloud
 
 [headscale]
 worker.cloud

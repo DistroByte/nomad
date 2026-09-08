@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# Managed by ansible/playbooks/headscale.yaml — do not edit on the host.
+#
+# Ships headscale's state (db.sqlite, noise_private.key, config.yaml) offsite
+# with restic. Runs directly on this host and talks straight to B2 over the
+# public internet — the control plane's backup path must never depend on the
+# tailnet it serves.
+set -euo pipefail
+umask 077
+
+stage="{{ headscale_backup_dir }}/stage"
+mkdir -p "$stage"
+
+# .backup is the online-safe copy; never plain-copy a live sqlite file.
+sqlite3 "{{ headscale_deploy_dir }}/data/db.sqlite" ".backup $stage/db.sqlite"
+cp "{{ headscale_deploy_dir }}/data/noise_private.key" "$stage/"
+cp "{{ headscale_deploy_dir }}/data/config.yaml" "$stage/"
+
+set -a
+# shellcheck disable=SC1091
+. /etc/headscale-backup.env
+set +a
+
+restic cat config >/dev/null 2>&1 || restic init
+restic backup "$stage" --host worker --tag headscale
+
+if [ "$(date +%u)" = "7" ]; then
+  restic forget --keep-daily 14 --keep-weekly 8 --prune
+fi
+
+# Freshness heartbeat to Gatus over the OCI VCN private network — not the
+# tailnet, and not the public internet.
+curl -fsS -X POST --max-time 15 \
+  -H "Authorization: Bearer $HEARTBEAT_TOKEN" \
+  "{{ headscale_backup_heartbeat_url }}" || true

@@ -6,6 +6,21 @@ tailscale_login_server: https://headscale.dbyte.xyz
 tailscale_advertise_routes: ""
 tailscale_exit_node: false
 
+# False on nodes inside an advertised subnet — accepting the route for your own
+# LAN sends it via tailscale0 and black-holes it.
+tailscale_accept_routes: true
+
+# False on worker: MagicDNS forwards to the LAN Pi-hole, and the control plane
+# must not depend on the tailnet it serves.
+tailscale_accept_dns: true
+
+# Unix user allowed to run tailscale without sudo. Workstations only.
+tailscale_operator: ""
+
+# Egress via another node's exit node. Needed where the host has no IPv4, since
+# Docker and Nomad bridges are IPv4-only and cannot use the host's IPv6.
+tailscale_exit_node_use: ""
+
 # Tailnet device name; defaults to the inventory name. Override in host_vars
 # when the inventory name differs from the desired MagicDNS name.
 tailscale_hostname: "{{ inventory_hostname }}"
@@ -13,8 +28,11 @@ tailscale_hostname: "{{ inventory_hostname }}"
 # Composed into the artis3n.tailscale role's tailscale_args variable
 tailscale_args: >-
   --login-server={{ tailscale_login_server }}
-  --accept-routes
+  {{ '--accept-routes' if tailscale_accept_routes else '' }}
+  {{ '' if tailscale_accept_dns else '--accept-dns=false' }}
+  {{ ('--operator=' + tailscale_operator) if tailscale_operator else '' }}
   --hostname={{ tailscale_hostname }}
   {{ ('--advertise-routes=' + tailscale_advertise_routes) if tailscale_advertise_routes else '' }}
   {{ '--advertise-exit-node' if tailscale_exit_node else '' }}
+  {{ ('--exit-node=' + tailscale_exit_node_use + ' --exit-node-allow-lan-access') if tailscale_exit_node_use else '' }}
   --reset

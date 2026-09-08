@@ -1,0 +1,47 @@
+# The public/private DNS split — apply ONLY after the Traefik entrypoint split
+# (plan Phase 4) has shipped, by renaming this to records-public.tf and deleting
+# the imported wildcard record from records.tf in the same commit.
+#
+# Effect: only the deliberately-public set resolves on the internet; every
+# other *.dbyte.xyz name (vault, paperless, actual, ha, molecule, traefik, …)
+# goes NXDOMAIN publicly and resolves only via Pi-hole (LAN) and headscale
+# extra_records (tailnet).
+#
+# All records stay grey-cloud (proxied = false): Mumble is raw L4 and the relay
+# path terminates TLS at Traefik, neither of which survives orange-cloud. TTL
+# 300 keeps a manual failover flip to the relay/home IP reasonably fast.
+
+locals {
+  # dbyte.xyz names that stay public, all at the ingress address
+  public_dbyte_names = [
+    "immich",  # shared albums for people without tailscale
+    "request", # jellyseerr
+    "share",   # mediashare (basicAuth)
+    "mumble",  # voice, tcp+udp 64738 via the relay
+  ]
+}
+
+resource "cloudflare_dns_record" "public_dbyte" {
+  for_each = toset(local.public_dbyte_names)
+
+  zone_id = data.cloudflare_zones.dbyte.result[0].id
+  name    = "${each.value}.dbyte.xyz"
+  type    = "A"
+  content = var.relay_ipv4
+  ttl     = 300
+  proxied = false
+}
+
+# headplane stays public alongside headscale (control-plane UI, on worker)
+resource "cloudflare_dns_record" "headplane" {
+  zone_id = data.cloudflare_zones.dbyte.result[0].id
+  name    = "headplane.dbyte.xyz"
+  type    = "A"
+  content = var.worker_ipv4
+  ttl     = 300
+  proxied = false
+}
+
+# Apexes + www of the public sites; photo/admin-photo on james-hackett.ie.
+# These mostly already exist — import them rather than letting terraform
+# recreate, then let this file assert their content.

@@ -20,7 +20,9 @@ services:
       - headscale
 
   headscale:
-    image: headscale/headscale:latest
+    # Pinned: minor releases carry one-way DB migrations, so the control plane
+    # only moves versions deliberately, alongside a fresh state backup.
+    image: headscale/headscale:v0.29.3
     container_name: headscale
     restart: unless-stopped
     # Config lives on the data volume, not bind-mounted read-only from the repo,

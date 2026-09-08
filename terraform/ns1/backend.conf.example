@@ -1,0 +1,7 @@
+# Copy to backend.conf (git-ignored — the namespace is identifying and the
+# repo is public). No secrets here: the access/secret pair arrives as
+# AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY from ../tf.sh, which also passes
+# this file to `terraform init` automatically.
+bucket    = "terraform-state"
+region    = "uk-london-1"
+endpoints = { s3 = "https://CHANGE-ME-namespace.compat.objectstorage.uk-london-1.oraclecloud.com" }

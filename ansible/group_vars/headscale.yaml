@@ -10,3 +10,26 @@
 
 headscale_deploy_dir: /opt/headscale
 headplane_cookie_secret: "{{ vault_headplane_cookie_secret }}"
+
+# --- Offsite state backup (restic → B2) -------------------------------------
+# The backup tasks are skipped until these vault vars exist:
+#   ansible-vault encrypt_string "s3:https://s3.<region>.backblazeb2.com/<bucket>/headscale" \
+#     --name vault_headscale_restic_repository >> ansible/group_vars/all.yaml
+#   ansible-vault encrypt_string "$(openssl rand -hex 32)" \
+#     --name vault_headscale_restic_password >> ansible/group_vars/all.yaml
+#   ansible-vault encrypt_string "<b2-key-id>" \
+#     --name vault_restic_b2_key_id >> ansible/group_vars/all.yaml
+#   ansible-vault encrypt_string "<b2-application-key>" \
+#     --name vault_restic_b2_application_key >> ansible/group_vars/all.yaml
+headscale_backup_dir: /opt/headscale/backup
+headscale_restic_repository: "{{ vault_headscale_restic_repository | default('') }}"
+headscale_restic_password: "{{ vault_headscale_restic_password | default('') }}"
+restic_b2_key_id: "{{ vault_restic_b2_key_id | default('') }}"
+restic_b2_application_key: "{{ vault_restic_b2_application_key | default('') }}"
+gatus_heartbeat_token: "{{ vault_gatus_heartbeat_token }}"
+
+# Freshness heartbeat target: Gatus on observability's VCN PRIVATE address
+# (10.x), so the path is OCI-internal — not the tailnet this backup protects,
+# and not the public internet. Find it with `ip -4 addr` on observability.
+headscale_backup_heartbeat_host: "CHANGE-ME-observability-vcn-ip"
+headscale_backup_heartbeat_url: "http://{{ headscale_backup_heartbeat_host }}:8080/api/v1/endpoints/backups_headscale/external?success=true"

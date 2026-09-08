@@ -1,0 +1,2 @@
+# Copy to terraform.tfvars (git-ignored). The API token comes from ../tf.sh.
+headscale_record_id = "CHANGE-ME"

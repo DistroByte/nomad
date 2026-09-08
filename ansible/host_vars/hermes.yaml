@@ -1,6 +1,14 @@
 ---
 tailscale_advertise_routes: "192.168.0.0/24"
-tailscale_exit_node: true
+
+# TEMPORARY while the ISP withholds IPv4. Tailscale refuses to advertise and
+# consume an exit node at once, so hermes trades its own (v6-only, useless) one
+# for working IPv4. Revert both once v4 returns — hermes is the only Irish
+# egress; observability presents as London.
+# Hostname, not tailnet IP: resolved from the netmap, so it survives headscale
+# reallocating addresses.
+tailscale_exit_node: false
+tailscale_exit_node_use: "observability"
 
 nomad_host_volumes:
   - name: immich-postgres

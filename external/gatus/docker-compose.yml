@@ -5,6 +5,9 @@ services:
     restart: unless-stopped
     ports:
       - "${GATUS_BIND_ADDR:-127.0.0.1}:8080:8080"
+      # VCN private address: lets worker's headscale-backup heartbeat land
+      # without depending on the tailnet it protects.
+      - "${GATUS_BIND_ADDR_PRIVATE:-127.0.0.2}:8080:8080"
     # Public resolvers, deliberately not the host's. Pi-hole answers homelab
     # hostnames with 192.168.0.4, so with the host resolver every public-sites,
     # apps and ingress probe reached Traefik straight over the tailnet and never

@@ -1,4 +1,11 @@
 ---
+# zeus is inside 192.168.0.0/24, the subnet hermes advertises.
+tailscale_accept_routes: false
+
+# TEMPORARY while the ISP withholds IPv4. Hostname, not tailnet IP — resolved
+# from the netmap, survives headscale reallocating addresses.
+tailscale_exit_node_use: "observability"
+
 nomad_host_volumes:
   - name: immich-postgres-replica
     path: /opt/nomad/volumes/immich-postgres-replica

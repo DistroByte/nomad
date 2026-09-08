@@ -42,6 +42,57 @@ shows `Expiration: N/A`. Nodes that go offline reconnect with their existing
 identity once the control plane returns, provided the SQLite database and
 `noise_private.key` survive.
 
+### Nodes must resolve headscale independently
+
+hermes and zeus carry static entries so tailscaled can find the control plane
+regardless of resolver state. Add them to any new node.
+
+```
+# /etc/hosts
+2603:c020:c014:4eff::10  headscale.dbyte.xyz
+2603:c020:c014:4eff::10  headplane.dbyte.xyz
+```
+
+This is not about MagicDNS being circular — LAN nodes reach the Pi-hole
+directly over `br0`, so they resolve fine with the tailnet down. It guards
+against the duller failure that actually bit twice: a record that has not
+propagated, or a negative cache pinning the node to a dead address family.
+On 2026-09-07 Pi-hole held a NODATA for the new AAAA for the full 1800s SOA
+minimum, so every LAN node kept trying IPv4 that no longer existed.
+
+The separate, real SPOF is `dns.nameservers.global` in
+`external/headscale/config.yaml` — a single LAN address that **remote** clients
+can only reach via hermes's subnet route. When that route stopped serving, DNS
+died for every roaming client and the Gatus `internal` group went blind. Split
+DNS is the fix; hosts entries do not address it.
+
+**Never restart `tailscaled` over a connection routed through the tailnet.** The
+restart severs the session issuing it, and if the node cannot re-register there
+is no second way in — the home router firewalls inbound IPv6 and there is no
+inbound IPv4. Do it from the LAN.
+
+### IPv6
+
+Dual-stack since 2026-09-07, in `2603:c020:c014:4eff::/64` of the VCN's
+Oracle-allocated `/56`:
+
+| Host          | IPv4             | IPv6                      |
+| ------------- | ---------------- | ------------------------- |
+| worker        | 141.147.74.4     | `2603:c020:c014:4eff::10` |
+| observability | 132.226.210.138  | `2603:c020:c014:4eff::11` |
+
+`headscale.dbyte.xyz` has both A and AAAA, which is what lets nodes on
+IPv4-degraded links reach the control plane at all.
+
+It also removed a DERP hop — hermes (v6-only) and observability (v4-only) had
+no address family in common and relayed every packet. They now peer directly at
+`[2603:c020:c014:4eff::11]:41641`, 14ms.
+
+OCI security lists permit everything from `0.0.0.0/0` and `::/0`, so host
+`iptables`/`ip6tables` rules are the only filtering here. The v6 chains were
+empty until written by hand; anything bound to `[::]` is exposed unless a rule
+says otherwise.
+
 ## Initial Rollout
 
 The control plane is a Docker Compose stack on `worker` (141.147.74.4), so all

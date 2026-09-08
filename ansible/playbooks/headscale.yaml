@@ -143,4 +143,64 @@
       community.docker.docker_compose_v2:
         project_src: "{{ headscale_deploy_dir }}"
         state: present
-        pull: always
+        # "missing", not "always": headscale is version-pinned and must never
+        # be upgraded as a side effect of re-running this playbook.
+        pull: missing
+
+    # --- Offsite state backup (restic → B2) -------------------------------
+    # Control-plane state exists only on this host; its backup path must not
+    # depend on the tailnet it serves, so it ships straight to B2 from here.
+    # Skipped until the restic vault secrets exist (see group_vars/headscale.yaml).
+    - name: Configure the offsite state backup
+      when: vault_headscale_restic_password is defined
+      block:
+        - name: Install backup tooling
+          ansible.builtin.apt:
+            name:
+              - restic
+              - sqlite3
+            state: present
+            update_cache: true
+            cache_valid_time: 3600
+
+        - name: Ensure the backup directory exists
+          ansible.builtin.file:
+            path: "{{ headscale_backup_dir }}"
+            state: directory
+            owner: root
+            group: root
+            mode: "0700"
+
+        - name: Render restic credentials
+          ansible.builtin.template:
+            src: "{{ playbook_dir }}/templates/headscale/backup.env.j2"
+            dest: /etc/headscale-backup.env
+            owner: root
+            group: root
+            mode: "0600"
+
+        - name: Render the backup script
+          ansible.builtin.template:
+            src: "{{ playbook_dir }}/templates/headscale/backup.sh.j2"
+            dest: "{{ headscale_backup_dir }}/backup.sh"
+            owner: root
+            group: root
+            mode: "0700"
+
+        - name: Install the backup service and timer
+          ansible.builtin.template:
+            src: "{{ playbook_dir }}/templates/headscale/{{ item }}.j2"
+            dest: "/etc/systemd/system/{{ item }}"
+            owner: root
+            group: root
+            mode: "0644"
+          loop:
+            - headscale-backup.service
+            - headscale-backup.timer
+
+        - name: Enable the backup timer
+          ansible.builtin.systemd_service:
+            name: headscale-backup.timer
+            state: started
+            enabled: true
+            daemon_reload: true

@@ -43,7 +43,7 @@ job "paperless" {
     }
 
     task "paperless-webserver" {
-      driver = "docker"
+      driver         = "docker"
       shutdown_delay = "5s"
 
       env {
@@ -89,8 +89,75 @@ EOH
       }
     }
 
-    task "paperless-broker" {
+    # Companion rather than a separate periodic job: the CSI volume is
+    # single-node-writer, so only a task in this group can reach the live data.
+    # document_exporter produces a portable full export (documents + sqlite
+    # metadata) that restores with document_importer on any instance.
+    task "exporter" {
       driver = "docker"
+
+      config {
+        image        = "ghcr.io/paperless-ngx/paperless-ngx:2.20.13"
+        entrypoint   = ["/bin/sh"]
+        args         = ["/local/export-loop.sh"]
+        network_mode = "host"
+
+        mount {
+          type   = "bind"
+          target = "/backup"
+          source = "/backups/paperless"
+        }
+      }
+
+      volume_mount {
+        volume      = "paperless-data"
+        destination = "/data"
+        read_only   = false
+      }
+
+      template {
+        data = <<EOH
+PAPERLESS_DATA_DIR="/data/data"
+PAPERLESS_MEDIA_ROOT="/data/media"
+PAPERLESS_SECRETKEY={{ key "paperless/env/secret" }}
+HEARTBEAT_TOKEN={{ key "gatus/heartbeat-token" }}
+EOH
+
+        destination = "secrets/exporter.env"
+        env         = true
+        perms       = "400"
+      }
+
+      template {
+        destination = "local/export-loop.sh"
+        perms       = "755"
+        data        = <<EOH
+#!/bin/sh
+set -eu
+
+while :; do
+  # -c/-d keep the export incremental: unchanged documents are skipped and
+  # documents deleted in paperless are removed from the export.
+  python3 /usr/src/paperless/src/manage.py document_exporter /backup \
+    --compare-checksums --delete --no-progress-bar
+
+  curl -fsS -X POST --max-time 15 \
+    -H "Authorization: Bearer $HEARTBEAT_TOKEN" \
+    "http://observability.ts.dbyte.xyz:8080/api/v1/endpoints/backups_paperless/external?success=true" || true
+
+  sleep 86400
+done
+EOH
+      }
+
+      resources {
+        cpu    = 200
+        memory = 512
+      }
+    }
+
+    task "paperless-broker" {
+      driver         = "docker"
       shutdown_delay = "5s"
 
       config {
