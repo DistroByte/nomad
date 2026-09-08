@@ -1,9 +1,3 @@
-# Import blocks for the existing hand-built estate. First run:
-#   terraform plan -generate-config-out=generated.tf
-# then hand-tidy generated.tf into network.tf / instances.tf (keep
-# prevent_destroy on both instances) until plan is a no-op.
-# Requires terraform >= 1.7 (variable references in import ids).
-
 import {
   to = oci_core_vcn.homelab
   id = var.vcn_ocid

@@ -1,5 +1,3 @@
-# Copy to terraform.tfvars (git-ignored — the repo is public and OCIDs are
-# identifying). Provider auth comes from ~/.oci/config, secrets from ../tf.sh.
 compartment_ocid = "ocid1.compartment.oc1..CHANGE-ME"
 
 vcn_ocid                    = "ocid1.vcn.oc1..CHANGE-ME"

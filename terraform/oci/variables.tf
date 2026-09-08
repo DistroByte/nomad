@@ -3,8 +3,6 @@ variable "compartment_ocid" {
   description = "Compartment holding the homelab VCN and instances"
 }
 
-# --- OCIDs of the existing hand-built resources, for import ---------------
-
 variable "vcn_ocid" {
   type = string
 }

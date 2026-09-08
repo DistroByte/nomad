@@ -9,9 +9,7 @@ terraform {
   }
 
   backend "s3" {
-    key = "cloudflare/terraform.tfstate"
-    # bucket, endpoints, region, credentials: -backend-config=backend.conf
-    # (same bucket as the oci root, different key)
+    key                         = "cloudflare/terraform.tfstate"
     skip_region_validation      = true
     skip_credentials_validation = true
     skip_requesting_account_id  = true

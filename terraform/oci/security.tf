@@ -1,28 +1,15 @@
-# The one deliberate change in this root: the VCN's default security list
-# currently allows everything from 0.0.0.0/0 and ::/0, leaving host iptables as
-# the only real filter (and the v6 chains started empty — see docs/Headscale.md).
-#
-# oci_core_default_security_list adopts the existing default list on first
-# apply (no import needed) and replaces its rules with the set below.
-#
-# Apply BEFORE adding the third Nomad/Consul server: without 41641/udp the
-# cloud<->home tailscale path silently degrades to DERP.
-
 locals {
   world_v4 = "0.0.0.0/0"
   world_v6 = "::/0"
 
-  # port, protocol pairs opened to the world on both address families
   public_tcp_ports = [
-    22,    # ssh (key-auth only; home is CGNAT so source-pinning is not viable)
-    80,    # caddy (worker) / relay redirect (observability)
-    443,   # caddy (worker) / relay https (observability)
-    64738, # relay -> mumble
+    22,
+    80,
+    443,
+    64738,
   ]
 }
 
-# Data source rather than the imported resource so this file stands alone —
-# it must validate and apply before/without the generated instance config.
 data "oci_core_vcn" "homelab" {
   vcn_id = var.vcn_ocid
 }
@@ -54,7 +41,6 @@ resource "oci_core_default_security_list" "homelab" {
     }
   }
 
-  # mumble voice is tcp+udp
   dynamic "ingress_security_rules" {
     for_each = toset([local.world_v4, local.world_v6])
     content {
@@ -67,8 +53,6 @@ resource "oci_core_default_security_list" "homelab" {
     }
   }
 
-  # tailscale direct path — required for cloud<->home cluster traffic to avoid
-  # DERP relaying
   dynamic "ingress_security_rules" {
     for_each = toset([local.world_v4, local.world_v6])
     content {
@@ -81,7 +65,6 @@ resource "oci_core_default_security_list" "homelab" {
     }
   }
 
-  # gatus heartbeat from worker over the VCN private network only
   ingress_security_rules {
     protocol = "6"
     source   = var.vcn_cidr
@@ -91,7 +74,6 @@ resource "oci_core_default_security_list" "homelab" {
     }
   }
 
-  # path MTU discovery and reachability
   ingress_security_rules {
     protocol = "1" # icmp
     source   = local.world_v4
