@@ -122,13 +122,42 @@
         state: absent
       when: not dns_extra_staged.changed
 
+    - name: Check whether the control plane is configured to read the records
+      # headplane edits the deployed config in place, so the repo copy is not
+      # what runs. Until dns.extra_records_path is hand-applied there, this file
+      # is staged and inert — and asserting a successful reload would be
+      # asserting something that cannot have happened.
+      ansible.builtin.command:
+        argv: [grep, -c, "extra_records_path", "{{ headscale_deploy_dir }}/data/config.yaml"]
+      register: dns_headscale_configured
+      changed_when: false
+      failed_when: false
+
+    - name: Point out that the records are staged but not yet read
+      ansible.builtin.debug:
+        msg: >-
+          extra-records.json is in place on {{ inventory_hostname }}, but
+          dns.extra_records_path is not in the deployed config, so headscale is
+          not reading it yet. Hand-apply the dns: block from
+          external/headscale/config.yaml to
+          {{ headscale_deploy_dir }}/data/config.yaml and restart the container
+          — see the cutover order in docs/DNS.md. Roaming clients keep resolving
+          via the old nameserver until then.
+      when: dns_headscale_configured.stdout | trim | int == 0
+
     - name: Confirm the control plane took the records
-      # headscale logs a parse failure and keeps serving the previous set, so
-      # a successful reload has to be asserted rather than assumed.
+      # headscale logs a parse failure and keeps serving the previous set, so a
+      # successful reload has to be asserted rather than assumed.
+      #
+      # The parentheses are load-bearing: `a ~ b is search(c)` parses as
+      # `a ~ (b is search(c))` because `is` binds tighter than `~` in Jinja,
+      # which concatenates a string with a boolean and is therefore always
+      # truthy — a failed_when that fires on every run regardless of the logs.
       ansible.builtin.command:
         argv: [docker, logs, --since, 30s, headscale]
       register: dns_headscale_logs
       changed_when: false
+      when: dns_headscale_configured.stdout | trim | int > 0
       failed_when: >-
-        dns_headscale_logs.stdout ~ dns_headscale_logs.stderr
+        (dns_headscale_logs.stdout ~ dns_headscale_logs.stderr)
         is search('(?i)(extra.?record).*(error|failed|invalid)')
