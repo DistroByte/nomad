@@ -201,34 +201,85 @@
         enabled: true
         daemon_reload: true
 
-    - name: Start the resolver
-      community.docker.docker_compose_v2:
-        project_src: "{{ pihole_deploy_dir }}"
-        state: present
-        # "missing", not "always": the image is pinned and must never move as a
-        # side effect of re-running this playbook.
-        pull: missing
-        # A changed .env does not change the compose file's own config hash, so
-        # say so explicitly or the new settings never reach a running container.
-        recreate: "{{ 'always' if pihole_env.changed else 'auto' }}"
+    - name: Bring the resolver up and prove it answers
+      block:
+        - name: Start the resolver
+          community.docker.docker_compose_v2:
+            project_src: "{{ pihole_deploy_dir }}"
+            state: present
+            # "missing", not "always": the image is pinned and must never move
+            # as a side effect of re-running this playbook.
+            pull: missing
+            # A changed .env does not change the compose file's own config hash,
+            # so say so explicitly or the new settings never reach a running
+            # container.
+            recreate: "{{ 'always' if pihole_env.changed else 'auto' }}"
 
-    - name: Wait for the resolver to answer
-      # Its own static record, which this playbook generated: an empty answer
-      # means FTL came up without the forced settings, which a check against
-      # pi.hole's built-in record would not catch.
-      ansible.builtin.command:
-        argv:
-          - dig
-          - +short
-          - +timeout=2
-          - +tries=1
-          - "@127.0.0.1"
-          - "{{ inventory_hostname }}.internal"
-      register: pihole_dig
-      until: pihole_dig.rc == 0 and pihole_dig.stdout | trim == ansible_host
-      retries: 30
-      delay: 2
-      changed_when: false
+        - name: Wait for the resolver to answer
+          # Its own static record, which this playbook generated: an empty
+          # answer means FTL came up without the forced settings, which a check
+          # against pi.hole's built-in record would not catch.
+          ansible.builtin.command:
+            argv:
+              - dig
+              - +short
+              - +timeout=2
+              - +tries=1
+              - "@127.0.0.1"
+              - "{{ inventory_hostname }}.internal"
+          register: pihole_dig
+          until: pihole_dig.rc == 0 and pihole_dig.stdout | trim == ansible_host
+          retries: 30
+          delay: 2
+          changed_when: false
+
+      rescue:
+        # A bare "timed out after 60s" says nothing about which of the three
+        # plausible causes it was — FTL refusing the config, FTL not binding
+        # :53, or FTL up but without the static records. Collect all three
+        # answers into the failure itself rather than leaving them to be dug
+        # out by hand on a node that currently has no local resolver.
+        - name: Collect the resolver's own account of the failure
+          ansible.builtin.command:
+            argv: [docker, logs, --tail, "40", pihole]
+          register: pihole_diag_logs
+          changed_when: false
+          failed_when: false
+
+        - name: Check what FTL actually parsed into dns.hosts
+          ansible.builtin.command:
+            argv: [docker, exec, pihole, pihole-FTL, --config, dns.hosts]
+          register: pihole_diag_hosts
+          changed_when: false
+          failed_when: false
+
+        - name: Check whether anything is listening on :53
+          ansible.builtin.command:
+            argv: [ss, -lntup]
+          register: pihole_diag_ports
+          changed_when: false
+          failed_when: false
+
+        - name: Report why the resolver did not come up
+          ansible.builtin.fail:
+            msg: |
+              {{ inventory_hostname }}'s Pi-hole did not answer for
+              {{ inventory_hostname }}.internal within 60s.
+
+              This node is now half-configured: the systemd-resolved stub
+              listener is off and /etc/resolv.conf is the static file, so it is
+              resolving through its fallbacks (the peer, then dionysus) with a
+              timeout penalty. It is degraded, not offline. To put it back, see
+              the rollback section of docs/DNS.md.
+
+              --- listeners on :53 ---
+              {{ pihole_diag_ports.stdout_lines | default([]) | select('search', ':53') | join('\n') }}
+
+              --- dns.hosts as FTL parsed it ---
+              {{ pihole_diag_hosts.stdout | default('(could not read)') }}
+
+              --- last 40 lines of the container log ---
+              {{ pihole_diag_logs.stdout | default('(no log)') }}
 
     - name: Manage the adlists
       # gravity.db, not FTL config, so these cannot ride in on FTLCONF_*.
