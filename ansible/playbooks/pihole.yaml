@@ -434,6 +434,7 @@
             status_code: [200, 201]
           loop: "{{ pihole_adlists | difference(pihole_lists_live) }}"
           register: pihole_lists_added
+          changed_when: true
 
         - name: Remove adlists that are no longer declared
           ansible.builtin.uri:
@@ -444,13 +445,27 @@
             status_code: [200, 204]
           loop: "{{ pihole_lists_live | difference(pihole_adlists) }}"
           register: pihole_lists_removed
+          changed_when: true
 
-        - name: Rebuild gravity  # noqa: no-handler
-          # Only after a list change: a full run re-downloads every blocklist.
+        - name: Rebuild gravity
+          # Derived from state rather than from a `changed` flag: the uri module
+          # reports changed=false for a POST, so keying off it silently skipped
+          # this after adding 25 adlists, leaving every one of them at
+          # status 0 (never downloaded) with only the pre-existing list active.
+          #
+          # The status check is what makes it self-healing: a list that has
+          # never been fetched gets picked up on the next run even though the
+          # configured and live sets already match.
           ansible.builtin.command:
             argv: [docker, exec, pihole, pihole, -g]
-          when: pihole_lists_added is changed or pihole_lists_removed is changed
+          when: >-
+            (pihole_adlists | difference(pihole_lists_live) | length > 0)
+            or (pihole_lists_live | difference(pihole_adlists) | length > 0)
+            or (pihole_lists.json.lists | default([])
+                | map(attribute='status', default=0) | select('equalto', 0)
+                | list | length > 0)
           changed_when: true
+          timeout: 900
 
       rescue:
         - name: Warn that the adlists were not reconciled
