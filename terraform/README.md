@@ -35,6 +35,19 @@ git-ignored: `backend.conf` (bucket/region/namespace endpoint — `tf.sh`
 passes it to `init` automatically) and `terraform.tfvars` (resource OCIDs for
 import, record ids).
 
+`tf.sh` refuses to run until that is all in place, and says which piece is
+missing and the command that fixes it — everything it needs is per-machine and
+git-ignored, so a fresh laptop is missing several things at once and a provider
+would otherwise report it as an authentication error three steps later:
+
+```
+$ ./tf.sh oci plan
+Cannot run tofu in oci — set up is incomplete:
+  - oci/backend.conf is missing: cp oci/backend.conf.example oci/backend.conf and fill in the Object Storage namespace
+  - oci/terraform.tfvars is missing: cp oci/terraform.tfvars.example oci/terraform.tfvars and fill in the OCIDs / record ids
+  - /Users/you/.oci/config is missing: brew install oci-cli && oci setup config
+```
+
 ## One-time bootstrap (manual, in the OCI console)
 
 1. Create bucket `terraform-state` in the home region, **enable versioning**.
