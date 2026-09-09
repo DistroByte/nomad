@@ -261,6 +261,34 @@ Approval is no longer a manual step: the second play in
 `tailscale_advertise_routes` or `tailscale_exit_node` there, re-run the
 playbook, and the approval follows.
 
+### Hand-built hosts carry a duplicate tailscale apt source
+
+zeus and worker were installed by hand before they were adopted into the
+`[tailscale]` group, so they carry the source file from Tailscale's official
+instructions *and* the one the `artis3n.tailscale` role writes. apt refuses to
+choose between two entries for the same suite with different keyring paths:
+
+```
+E: Conflicting values set for option Signed-By regarding source
+   https://pkgs.tailscale.com/stable/... : /usr/share/keyrings/tailscale-archive-keyring.gpg !=
+```
+
+The role's apt task fails on that, before it reaches `tailscale up`, so the run
+leaves the host untouched rather than half-configured. hermes and
+observability never had the hand-added file and are unaffected.
+
+Park both files and let the role recreate the one it manages:
+
+```sh
+grep -rn pkgs.tailscale.com /etc/apt/sources.list /etc/apt/sources.list.d/
+sudo mkdir -p /root/apt-backup
+sudo mv /etc/apt/sources.list.d/tailscale.* /root/apt-backup/
+sudo apt update
+```
+
+`ansible/playbooks/apt-update.yaml` hits the same wall on those hosts, so this
+is worth clearing rather than working around.
+
 ## Workstations are not Ansible-managed
 
 `archdesktop` and `archlaptop` are not in the `[tailscale]` group in
