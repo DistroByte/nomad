@@ -283,8 +283,17 @@
 
     - name: Manage the adlists
       # gravity.db, not FTL config, so these cannot ride in on FTLCONF_*.
+      #
+      # Best-effort on purpose. Adlists are not what this playbook exists for,
+      # and the Teleporter seed carries them anyway (they live in the same
+      # gravity.db as the allow/deny rules), so a quirk in Pi-hole's list API
+      # must not be able to block the DNS redundancy this phase is about. The
+      # rescue below warns and moves on.
       vars:
-        pihole_lists_live: "{{ pihole_lists.json.lists | default([]) | map(attribute='address') | list }}"
+        pihole_lists_live: >-
+          {{ pihole_lists.json.lists | default([])
+             | selectattr('type', 'equalto', 'block')
+             | map(attribute='address') | list }}
       block:
         - name: Log in to the local API
           ansible.builtin.uri:
@@ -298,8 +307,11 @@
           changed_when: false
 
         - name: Read the configured adlists
+          # No ?type= filter: the bare endpoint is the shape verified against a
+          # live Pi-hole v6, and each item carries its own `type`, so the
+          # filtering happens in pihole_lists_live instead.
           ansible.builtin.uri:
-            url: "{{ pihole_api }}/lists?type=block"
+            url: "{{ pihole_api }}/lists"
             headers:
               X-FTL-SID: "{{ pihole_auth.json.session.sid }}"
           register: pihole_lists
@@ -337,6 +349,17 @@
           when: pihole_lists_added is changed or pihole_lists_removed is changed
           changed_when: true
 
+      rescue:
+        - name: Warn that the adlists were not reconciled
+          ansible.builtin.debug:
+            msg: >-
+              Could not reconcile adlists on {{ inventory_hostname }} through
+              the Pi-hole API, so gravity was left as it is. DNS itself is
+              deployed and working — only the blocklist subscriptions are
+              unmanaged. The Teleporter seed described in this playbook's
+              header imports them, or add them in the UI. Failed task said:
+              {{ ansible_failed_result.msg | default('see above') }}
+
       always:
         - name: Close the API session
           ansible.builtin.uri:
@@ -347,3 +370,4 @@
             status_code: [200, 204, 410]
           when: pihole_auth.json.session.sid | default('') != ''
           changed_when: false
+          failed_when: false

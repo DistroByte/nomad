@@ -71,6 +71,12 @@ pihole_fallback_resolvers:
   - "192.168.0.5"
 
 # Seeded from dionysus. `block` lists only; Pi-hole also supports `allow`.
+#
+# These are asserted through the Pi-hole API on a best-effort basis: adlists
+# live in gravity.db rather than FTL config, and the Teleporter seed imports
+# them alongside the allow/deny rules, so this list is as much a written record
+# of what should be subscribed as it is the mechanism. If the reconcile step
+# warns, DNS is still fully deployed — only the subscriptions are unmanaged.
 pihole_adlists:
   - https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts
   - https://raw.githubusercontent.com/PolishFiltersTeam/KADhosts/master/KADhosts.txt
