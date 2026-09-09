@@ -97,6 +97,36 @@ will actually resolve.
 address: if it ever changes, update `pihole_headscale_pins` **before** the old
 one stops answering, or the house has no path back onto the tailnet.
 
+### Enabling IPv6 forwarding purges the default route
+
+Writing `net.ipv6.conf.all.forwarding=1` makes the host a router, and the
+kernel reacts by purging every RA-derived default route and ignoring later RAs
+unless `accept_ra` is `2`. Because IPv6 is the only transit here, that single
+sysctl can take a home node completely off the network — no IPv6, so no
+headscale, so no tailnet, so no IPv4 egress either.
+
+`ansible/playbooks/tailscale.yaml` sets that sysctl. Two things keep it safe,
+and both are load-bearing:
+
+- `accept_ra=2` is set **before** forwarding, so the node can re-accept an RA
+  after the purge.
+- Neither task uses `reload: true`. That runs `sysctl -p`, which rewrites every
+  value unconditionally — so even a no-op run re-applied `forwarding=1` and
+  purged the route. `sysctl_set` applies the live value by itself.
+
+If it happens anyway, restore transit immediately rather than waiting for the
+next unsolicited RA:
+
+```sh
+ip -6 route show default                    # empty is the symptom
+sysctl -w net.ipv6.conf.all.accept_ra=2
+ip -6 route add default via <router-link-local> dev <iface>   # br0 on hermes
+```
+
+`rdisc6 -1 <iface>` solicits an RA directly if `ndisc6` is installed — but note
+that installing it needs working transit, which is the thing that is broken, so
+the manual route is the reliable move.
+
 ### The router must advertise SLAAC, not stateful DHCPv6
 
 hermes and zeus take their global IPv6 by SLAAC — their addresses are EUI-64

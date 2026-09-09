@@ -31,31 +31,70 @@
     - '!hardware'
 
   pre_tasks:
+    # ORDER AND `reload: false` BOTH MATTER HERE. Enabling
+    # net.ipv6.conf.all.forwarding makes the host a router, and the kernel
+    # responds by purging every RA-derived default route
+    # (rt6_purge_dflt_routers) and ignoring subsequent RAs unless accept_ra is
+    # 2, "overrule forwarding".
+    #
+    # On the home nodes that is not cosmetic. The line is DS-Lite with the IPv4
+    # tunnel disabled by the ISP, so the SLAAC address and the RA default route
+    # are the *only* transit out of the house: lose them and there is no IPv6,
+    # therefore no headscale, therefore no tailnet, therefore no IPv4 egress
+    # either. A run of this playbook took the home nodes off the network exactly
+    # that way on 2026-09-09.
+    #
+    # `reload: true` was the trigger: it runs `sysctl -p`, which rewrites every
+    # value unconditionally — including forwarding=1 when it was already 1 —
+    # so an otherwise no-op run still purged the default route. `sysctl_set`
+    # applies the live value on its own and `state: present` persists it, so
+    # the reload was never needed.
+    - name: Overrule forwarding's effect on router advertisements
+      # Must precede the forwarding task: it is what lets the node re-accept an
+      # RA after forwarding purges the route it is currently using.
+      ansible.posix.sysctl:
+        name: net.ipv6.conf.all.accept_ra
+        value: "2"
+        sysctl_set: true
+        state: present
+        reload: false
+
     - name: Enable IP forwarding for subnet routing
       ansible.posix.sysctl:
         name: "{{ item }}"
         value: "1"
         sysctl_set: true
         state: present
-        reload: true
+        reload: false
       loop:
         - net.ipv4.ip_forward
         - net.ipv6.conf.all.forwarding
 
-    - name: Keep accepting router advertisements despite forwarding
-      # Enabling net.ipv6.conf.all.forwarding makes the host a router, and the
-      # kernel then ignores RAs unless accept_ra is 2 ("overrule forwarding").
-      # On the home nodes that is not cosmetic: the line is DS-Lite with the
-      # IPv4 tunnel disabled, so the SLAAC address and RA default route are the
-      # only transit out of the house, and losing them on a cold boot means no
-      # IPv6, therefore no headscale, therefore no tailnet, therefore no IPv4
-      # either. See docs/Headscale.md.
-      ansible.posix.sysctl:
-        name: net.ipv6.conf.all.accept_ra
-        value: "2"
-        sysctl_set: true
-        state: present
-        reload: true
+    - name: Wait for the IPv6 default route before touching anything else
+      # The home nodes have no other transit, and the next task the role runs
+      # is apt. Without this check a purged default route surfaces as an apt
+      # task hanging for minutes with nothing to explain it.
+      when: inventory_hostname in groups['home']
+      ansible.builtin.command:
+        argv: [ip, -6, route, show, default]
+      register: tailscale_v6_default
+      until: tailscale_v6_default.stdout | trim != ''
+      retries: 12
+      delay: 10
+      changed_when: false
+      failed_when: false
+
+    - name: Fail clearly if IPv6 transit is gone
+      when:
+        - inventory_hostname in groups['home']
+        - tailscale_v6_default.stdout | default('') | trim == ''
+      ansible.builtin.fail:
+        msg: >-
+          No IPv6 default route on {{ inventory_hostname }} after 120s, so this
+          node has no transit at all (DS-Lite here carries no IPv4). Check
+          `rdisc6 -1 <iface>` for a router advertising SLAAC, and
+          `sysctl net.ipv6.conf.all.accept_ra` for the value 2. To restore it by
+          hand: `ip -6 route add default via <router-link-local> dev <iface>`.
 
   roles:
     - artis3n.tailscale.machine
