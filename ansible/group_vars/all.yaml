@@ -8,6 +8,11 @@ users:
 nomad_datacenter_name: dc1
 nomad_server_bootstrap_expect: 2
 
+# MagicDNS suffix headscale serves. Must match dns.base_domain in
+# external/headscale/config.yaml — the Pi-holes mirror the infrastructure names
+# under it as static records so they resolve without the tailnet.
+tailnet_base_domain: ts.dbyte.xyz
+
 postgres_uid: 999
 postgres_gid: 999
 

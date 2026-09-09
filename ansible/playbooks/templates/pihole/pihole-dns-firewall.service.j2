@@ -1,0 +1,15 @@
+# Managed by ansible/playbooks/pihole.yaml — edits here are overwritten.
+[Unit]
+Description=Restrict inbound DNS on the Pi-hole node to local networks
+# Docker and tailscaled both rewrite INPUT when they start; running after them
+# keeps the catch-all DROP at the tail of the chain where it belongs.
+After=network-online.target docker.service tailscaled.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart={{ pihole_deploy_dir }}/dns-firewall.sh
+
+[Install]
+WantedBy=multi-user.target

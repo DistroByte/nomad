@@ -1,0 +1,509 @@
+---
+# Deploys the two redundant home resolvers (hermes and zeus) as a Docker Compose
+# stack, replacing the single Pi-hole on dionysus.
+#
+# Config-as-code: group_vars/pihole.yaml is the source of truth and is pushed as
+# forced FTLCONF_* settings, so the web UI shows them read-only. The two things
+# this playbook does NOT own are misc.dnsmasq_lines (scripts/sync-dns.sh, via
+# ansible/playbooks/dns.yaml) and the allow/deny/group/client rules, which live
+# in gravity.db and come from a one-time Teleporter seed.
+#
+# Prerequisites:
+#   1. The host is in the [pihole] inventory group (ansible/hosts).
+#   2. vault_pihole_password is in ansible-vault, and the same value is in
+#      Consul KV at pihole/password (see group_vars/pihole.yaml).
+#   3. tailscale_accept_dns is false for these hosts. A node that takes its
+#      resolver from the tailnet whose DNS it itself serves is a loop, and
+#      tailscaled would fight the static resolv.conf written below.
+#
+# Deploy:
+#   ansible-playbook ansible/playbooks/pihole.yaml
+#
+# One-time seed of what gravity.db holds and this playbook does not (groups,
+# clients, allow/deny domains), taken from dionysus while it still runs:
+#   curl -fsS http://192.168.0.5/api/teleporter -o /tmp/dionysus.zip
+#   sid=$(curl -fsS -X POST http://<node>:8053/api/auth \
+#     -H 'Content-Type: application/json' -d '{"password":"<password>"}' \
+#     | jq -r .session.sid)
+#   curl -fsS -X POST "http://<node>:8053/api/teleporter" \
+#     -H "X-FTL-SID: $sid" -F 'file=@/tmp/dionysus.zip'
+# The import also restores dionysus's FTL settings, so re-run this playbook
+# afterwards to put the forced FTLCONF_* environment back on top.
+- name: Deploy the redundant home resolvers
+  hosts: pihole
+  become: true
+  # One node at a time. A rollout that took both resolvers down together would
+  # take the LAN, the tailnet and every container's DNS with it.
+  serial: 1
+  gather_subset:
+    - '!hardware'
+
+  vars:
+    pihole_peers: "{{ groups['pihole'] | difference([inventory_hostname]) }}"
+    pihole_api: "http://127.0.0.1:{{ pihole_web_port }}/api"
+
+    # Who may ask this resolver a question. Everything else is dropped on :53 —
+    # see templates/pihole/dns-firewall.sh.j2 for why that matters here.
+    pihole_dns_allow_v4:
+      - 127.0.0.0/8
+      - 192.168.0.0/24
+      - 100.64.0.0/10
+      - 172.16.0.0/12  # docker0 and any Nomad bridge
+    pihole_dns_allow_v6:
+      - ::1/128
+      - fe80::/10
+      - fc00::/7  # ULA, which is where the tailnet's fd7a:115c:a1e0::/48 sits
+
+  tasks:
+    - name: Fail early if the resolver password is not in the vault
+      # Without this the run dies on an undefined variable deep inside a
+      # template, which says nothing about what to do next.
+      ansible.builtin.assert:
+        that: vault_pihole_password is defined
+        fail_msg: >-
+          vault_pihole_password is missing from ansible/group_vars/all.yaml. Add it with
+          `ansible-vault encrypt_string "$(openssl rand -base64 24)" --name vault_pihole_password
+          >> ansible/group_vars/all.yaml`, then put the same value in Consul KV at
+          pihole/password for jobs/pihole-backup.hcl and scripts/sync-dns.sh.
+
+    - name: Install Docker Engine  # noqa: command-instead-of-module
+      # pipefail matters here: without it a failed download still reports
+      # success, because the exit status comes from `sh` reading empty input.
+      ansible.builtin.shell:
+        cmd: set -o pipefail && curl -fsSL https://get.docker.com | sh
+        executable: /bin/bash
+        creates: /usr/bin/docker
+
+    - name: Install the DNS client the verification steps use
+      ansible.builtin.apt:
+        name: bind9-dnsutils
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Ensure the deploy and state directories exist
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+      loop:
+        - "{{ pihole_deploy_dir }}"
+        - "{{ pihole_deploy_dir }}/etc-pihole"
+
+    - name: Sync the compose file
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../../external/pihole/docker-compose.yml"
+        dest: "{{ pihole_deploy_dir }}/docker-compose.yml"
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Render .env with the forced FTL settings
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/templates/pihole/env.j2"
+        dest: "{{ pihole_deploy_dir }}/.env"
+        owner: root
+        group: root
+        mode: "0600"
+      register: pihole_env
+
+    - name: Pull the image before anything touches the running resolver
+      # Deliberately ahead of the systemd-resolved change: between disabling the
+      # stub listener and FTL binding :53 this node has no local resolver, and a
+      # cold image pull would stretch that window from seconds into minutes.
+      ansible.builtin.command:
+        cmd: docker compose pull --quiet
+        chdir: "{{ pihole_deploy_dir }}"
+      changed_when: false
+
+    - name: Drop the resolved stub listener
+      # FTL binds 0.0.0.0:53, which cannot coexist with resolved's stub on
+      # 127.0.0.53 or its DNSStubListenerExtra on 172.17.0.1.
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/templates/pihole/resolved-pihole.conf.j2"
+        dest: /etc/systemd/resolved.conf.d/pihole.conf
+        owner: root
+        group: root
+        mode: "0644"
+      register: pihole_resolved_conf
+
+    - name: Remove the resolved drop-ins the stub listener made pointless
+      # docker.conf published the stub on 172.17.0.1 for containers, and
+      # consul.conf routed ~consul to the local agent. With DNSStubListener=no
+      # nothing reaches resolved at all, so both are inert — and consul.conf is
+      # actively misleading, because `.consul` is now served by the
+      # server=/consul/127.0.0.1#8600 line that scripts/sync-dns.sh emits.
+      # Rolling this back means restoring both: see docs/DNS.md.
+      ansible.builtin.file:
+        path: "/etc/systemd/resolved.conf.d/{{ item }}"
+        state: absent
+      loop:
+        - docker.conf
+        - consul.conf
+      register: pihole_resolved_docker_conf
+
+    - name: Check how /etc/resolv.conf is currently provided
+      ansible.builtin.stat:
+        path: /etc/resolv.conf
+      register: pihole_resolv_conf
+
+    - name: Break the resolv.conf symlink into /run/systemd/resolve
+      # It points at the stub listener that no longer exists; templating through
+      # the symlink would write into resolved's own runtime file instead.
+      ansible.builtin.file:
+        path: /etc/resolv.conf
+        state: absent
+      when: pihole_resolv_conf.stat.islnk | default(false)
+
+    - name: Write the node's resolver list
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/templates/pihole/resolv.conf.j2"
+        dest: /etc/resolv.conf
+        owner: root
+        group: root
+        mode: "0644"
+        follow: false
+
+    - name: Pin the control plane in /etc/hosts
+      # This playbook owns name resolution on these nodes, so it owns this too
+      # rather than leaving it as a hand-edited file documented in docs/.
+      # tailscaled resolves through getaddrinfo, which honours /etc/hosts — note
+      # that `host`/`dig` do not, so the pin is invisible to the obvious check.
+      ansible.builtin.blockinfile:
+        path: /etc/hosts
+        marker: "# {mark} ANSIBLE MANAGED: headscale control plane"
+        block: "{{ pihole_headscale_pins | join('\n') }}"
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Apply the resolved change  # noqa: no-handler
+      ansible.builtin.systemd_service:
+        name: systemd-resolved
+        state: restarted
+      when: pihole_resolved_conf.changed or pihole_resolved_docker_conf.changed
+
+    - name: Install the port-53 firewall script
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/templates/pihole/dns-firewall.sh.j2"
+        dest: "{{ pihole_deploy_dir }}/dns-firewall.sh"
+        owner: root
+        group: root
+        mode: "0700"
+      register: pihole_firewall_script
+
+    - name: Install the port-53 firewall unit
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/templates/pihole/pihole-dns-firewall.service.j2"
+        dest: /etc/systemd/system/pihole-dns-firewall.service
+        owner: root
+        group: root
+        mode: "0644"
+      register: pihole_firewall_unit
+
+    - name: Enable and apply the port-53 firewall
+      ansible.builtin.systemd_service:
+        name: pihole-dns-firewall.service
+        state: "{{ 'restarted' if (pihole_firewall_script.changed or pihole_firewall_unit.changed) else 'started' }}"
+        enabled: true
+        daemon_reload: true
+
+    - name: Bring the resolver up and prove it answers
+      block:
+        - name: Start the resolver
+          community.docker.docker_compose_v2:
+            project_src: "{{ pihole_deploy_dir }}"
+            state: present
+            # "missing", not "always": the image is pinned and must never move
+            # as a side effect of re-running this playbook.
+            pull: missing
+            # A changed .env does not change the compose file's own config hash,
+            # so say so explicitly or the new settings never reach a running
+            # container.
+            recreate: "{{ 'always' if pihole_env.changed else 'auto' }}"
+
+        - name: Wait for the resolver to answer
+          # Its own static record, which this playbook generated: an empty
+          # answer means FTL came up without the forced settings, which a check
+          # against pi.hole's built-in record would not catch.
+          ansible.builtin.command:
+            argv:
+              - dig
+              - +short
+              - +timeout=2
+              - +tries=1
+              - "@127.0.0.1"
+              - "{{ inventory_hostname }}.internal"
+          register: pihole_dig
+          until: pihole_dig.rc == 0 and pihole_dig.stdout | trim == ansible_host
+          retries: 30
+          delay: 2
+          changed_when: false
+
+        - name: Drop the legacy adlists file the image migrates from
+          # The container writes /etc/pihole/adlists.list on a fresh volume and
+          # migrates it into gravity.db on the first gravity run. Leaving it
+          # behind implies adlists are file-driven when they are rows in the
+          # database, managed below.
+          ansible.builtin.file:
+            path: "{{ pihole_deploy_dir }}/etc-pihole/adlists.list"
+            state: absent
+
+        - name: Check whether gravity has ever been built
+          ansible.builtin.stat:
+            path: "{{ pihole_deploy_dir }}/etc-pihole/gravity.db"
+          register: pihole_gravity_db
+
+        - name: Build gravity now that DNS is available
+          # The image tries this itself on a fresh volume and cannot succeed:
+          # it runs gravity *before* starting FTL, gravity needs DNS to download
+          # the blocklists, and with host networking the container inherits a
+          # resolv.conf whose entries are this node's own not-yet-started FTL,
+          # a peer that has no resolver yet, and dionysus. It gives up after
+          # 120s, leaving FTL serving queries with no gravity.db — which looks
+          # healthy from a dig but means no blocking, and makes every
+          # /api/lists call fail, because adlists are rows in that database.
+          #
+          # Here it works, because FTL is answering by this point.
+          ansible.builtin.command:
+            argv: [docker, exec, pihole, pihole, -g]
+          when: not pihole_gravity_db.stat.exists
+          changed_when: true
+          timeout: 600
+
+        - name: Restart so FTL initialises against a database that exists
+          # `pihole -g` writes the file and signals a reload, but FTL started
+          # with no gravity.db at all — logging "Cannot read gravity database"
+          # once a second — and no signal recovers from that properly.
+          # `pihole reloadlists` is enough to get blocking working, but leaves
+          # FTL holding the file read-only, so every write through the API
+          # fails with "attempt to write a readonly database". A restart is the
+          # only thing that gets a clean read-write handle, and it is safe here
+          # because serial:1 means the partner node is already serving.
+          community.docker.docker_compose_v2:
+            project_src: "{{ pihole_deploy_dir }}"
+            state: restarted
+          when: not pihole_gravity_db.stat.exists
+
+        - name: Require the container to report healthy
+          # "Does a dig answer?" was too weak an assertion: FTL served queries
+          # perfectly while having no gravity.db at all, so the resolver looked
+          # fine and was not. The image's own healthcheck is the stronger
+          # signal, and nothing else in this estate watches it.
+          ansible.builtin.command:
+            argv: [docker, inspect, pihole, --format, "{{ '{{' }} .State.Health.Status {{ '}}' }}"]
+          register: pihole_health
+          until: pihole_health.stdout | trim == 'healthy'
+          retries: 12
+          delay: 5
+          changed_when: false
+
+      rescue:
+        # A bare "timed out after 60s" says nothing about which of the three
+        # plausible causes it was — FTL refusing the config, FTL not binding
+        # :53, or FTL up but without the static records. Collect all three
+        # answers into the failure itself rather than leaving them to be dug
+        # out by hand on a node that currently has no local resolver.
+        - name: Collect the resolver's own account of the failure
+          ansible.builtin.command:
+            argv: [docker, logs, --tail, "40", pihole]
+          register: pihole_diag_logs
+          changed_when: false
+          failed_when: false
+
+        - name: Check what FTL actually parsed into dns.hosts
+          ansible.builtin.command:
+            argv: [docker, exec, pihole, pihole-FTL, --config, dns.hosts]
+          register: pihole_diag_hosts
+          changed_when: false
+          failed_when: false
+
+        - name: Check whether anything is listening on :53
+          ansible.builtin.command:
+            argv: [ss, -lntup]
+          register: pihole_diag_ports
+          changed_when: false
+          failed_when: false
+
+        - name: Report why the resolver did not come up
+          ansible.builtin.fail:
+            msg: |
+              Bringing up {{ inventory_hostname }}'s Pi-hole failed at:
+              "{{ ansible_failed_task.name | default('unknown task') }}"
+              — {{ ansible_failed_result.msg | default('no message') }}
+
+              Read that before the diagnostics below: this rescue covers the
+              whole startup sequence, so the failure may be the resolver not
+              answering, gravity not building, or the container not reporting
+              healthy. They have quite different fixes.
+
+              This node is now half-configured: the systemd-resolved stub
+              listener is off and /etc/resolv.conf is the static file, so it is
+              resolving through its fallbacks (the peer, then dionysus) with a
+              timeout penalty. It is degraded, not offline. To put it back, see
+              the rollback section of docs/DNS.md.
+
+              --- listeners on :53 ---
+              {{ pihole_diag_ports.stdout_lines | default([]) | select('search', ':53') | join('\n') }}
+
+              --- dns.hosts as FTL parsed it ---
+              {{ pihole_diag_hosts.stdout | default('(could not read)') }}
+
+              --- last 40 lines of the container log ---
+              {{ pihole_diag_logs.stdout | default('(no log)') }}
+
+    - name: Manage the adlists
+      # gravity.db, not FTL config, so these cannot ride in on FTLCONF_*.
+      #
+      # Best-effort on purpose. Adlists are not what this playbook exists for,
+      # and the Teleporter seed carries them anyway (they live in the same
+      # gravity.db as the allow/deny rules), so a quirk in Pi-hole's list API
+      # must not be able to block the DNS redundancy this phase is about. The
+      # rescue below warns and moves on.
+      vars:
+        pihole_lists_live: >-
+          {{ pihole_lists.json.lists | default([])
+             | selectattr('type', 'equalto', 'block')
+             | map(attribute='address') | list }}
+      block:
+        - name: Log in to the local API
+          ansible.builtin.uri:
+            url: "{{ pihole_api }}/auth"
+            method: POST
+            body_format: json
+            body:
+              password: "{{ pihole_password }}"
+          register: pihole_auth
+          no_log: true
+          changed_when: false
+
+        - name: Read the configured adlists
+          # No ?type= filter: the bare endpoint is the shape verified against a
+          # live Pi-hole v6, and each item carries its own `type`, so the
+          # filtering happens in pihole_lists_live instead.
+          ansible.builtin.uri:
+            url: "{{ pihole_api }}/lists"
+            headers:
+              X-FTL-SID: "{{ pihole_auth.json.session.sid }}"
+          register: pihole_lists
+          changed_when: false
+
+        - name: Give FTL a writable gravity handle before changing any lists
+          # Any FTL that started before gravity.db existed holds it read-only
+          # for the life of the process, so writes fail with "attempt to write a
+          # readonly database" — a 400, indistinguishable at a glance from the
+          # parameter error above. Building the database does not clear it and
+          # neither does `pihole reloadlists`; only a restart does.
+          #
+          # Conditioned on there being actual list work to do, so an unchanged
+          # run never dips DNS, and skipped when the bootstrap above already
+          # restarted for us.
+          when:
+            - pihole_gravity_db.stat.exists
+            - (pihole_adlists | difference(pihole_lists_live) | length > 0)
+              or (pihole_lists_live | difference(pihole_adlists) | length > 0)
+          block:
+            - name: Restart the resolver
+              community.docker.docker_compose_v2:
+                project_src: "{{ pihole_deploy_dir }}"
+                state: restarted
+
+            - name: Wait for it to answer again
+              ansible.builtin.command:
+                argv:
+                  - dig
+                  - +short
+                  - +timeout=2
+                  - +tries=1
+                  - "@127.0.0.1"
+                  - "{{ inventory_hostname }}.internal"
+              register: pihole_dig_again
+              until: pihole_dig_again.rc == 0 and pihole_dig_again.stdout | trim == ansible_host
+              retries: 30
+              delay: 2
+              changed_when: false
+
+            - name: Re-authenticate, since the restart dropped the session
+              ansible.builtin.uri:
+                url: "{{ pihole_api }}/auth"
+                method: POST
+                body_format: json
+                body:
+                  password: "{{ pihole_password }}"
+              register: pihole_auth
+              no_log: true
+              changed_when: false
+
+        - name: Add the missing adlists
+          # `type` is a query parameter, not a body field: sent in the body it
+          # is rejected with "Specify type parameter (should be either allow or
+          # block)". Verified against Pi-hole v6.4.3 / FTL v6.7.
+          ansible.builtin.uri:
+            url: "{{ pihole_api }}/lists?type=block"
+            method: POST
+            headers:
+              X-FTL-SID: "{{ pihole_auth.json.session.sid }}"
+            body_format: json
+            body:
+              address: "{{ item }}"
+              enabled: true
+            status_code: [200, 201]
+          loop: "{{ pihole_adlists | difference(pihole_lists_live) }}"
+          register: pihole_lists_added
+          changed_when: true
+
+        - name: Remove adlists that are no longer declared
+          ansible.builtin.uri:
+            url: "{{ pihole_api }}/lists/{{ item | urlencode }}?type=block"
+            method: DELETE
+            headers:
+              X-FTL-SID: "{{ pihole_auth.json.session.sid }}"
+            status_code: [200, 204]
+          loop: "{{ pihole_lists_live | difference(pihole_adlists) }}"
+          register: pihole_lists_removed
+          changed_when: true
+
+        - name: Rebuild gravity
+          # Derived from state rather than from a `changed` flag: the uri module
+          # reports changed=false for a POST, so keying off it silently skipped
+          # this after adding 25 adlists, leaving every one of them at
+          # status 0 (never downloaded) with only the pre-existing list active.
+          #
+          # The status check is what makes it self-healing: a list that has
+          # never been fetched gets picked up on the next run even though the
+          # configured and live sets already match.
+          ansible.builtin.command:
+            argv: [docker, exec, pihole, pihole, -g]
+          when: >-
+            (pihole_adlists | difference(pihole_lists_live) | length > 0)
+            or (pihole_lists_live | difference(pihole_adlists) | length > 0)
+            or (pihole_lists.json.lists | default([])
+                | map(attribute='status', default=0) | select('equalto', 0)
+                | list | length > 0)
+          changed_when: true
+          timeout: 900
+
+      rescue:
+        - name: Warn that the adlists were not reconciled
+          ansible.builtin.debug:
+            msg: >-
+              Could not reconcile adlists on {{ inventory_hostname }} through
+              the Pi-hole API, so gravity was left as it is. DNS itself is
+              deployed and working — only the blocklist subscriptions are
+              unmanaged. The Teleporter seed described in this playbook's
+              header imports them, or add them in the UI. Failed task said:
+              {{ ansible_failed_result.msg | default('see above') }}
+
+      always:
+        - name: Close the API session
+          ansible.builtin.uri:
+            url: "{{ pihole_api }}/auth"
+            method: DELETE
+            headers:
+              X-FTL-SID: "{{ pihole_auth.json.session.sid }}"
+            status_code: [200, 204, 410]
+          when: pihole_auth.json.session.sid | default('') != ''
+          changed_when: false
+          failed_when: false

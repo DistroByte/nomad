@@ -1,5 +1,16 @@
 ---
+# Tailnet address. Single source of truth for every place that needs to reach
+# this node over the tailnet rather than the LAN — Pi-hole's static records,
+# headscale's extra_records, and (from phase 5) the cluster's advertise
+# addresses. Sequential allocation in headscale makes these stable.
+tailnet_ipv4: 100.64.0.1
+
 tailscale_advertise_routes: "192.168.0.0/24"
+
+# hermes serves the tailnet's DNS. Taking DNS *from* the tailnet would make its
+# own resolution depend on the resolver it is hosting, and tailscaled would
+# fight the static /etc/resolv.conf that ansible/playbooks/pihole.yaml writes.
+tailscale_accept_dns: false
 
 # TEMPORARY while the ISP withholds IPv4. Tailscale refuses to advertise and
 # consume an exit node at once, so hermes trades its own (v6-only, useless) one

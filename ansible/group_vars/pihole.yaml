@@ -1,0 +1,106 @@
+---
+# Config for the [pihole] group — the two redundant home resolvers.
+#
+# The Pi-hole web UI is READ-ONLY BY CONVENTION. Everything below is pushed as
+# FTLCONF_* environment, which Pi-hole v6 treats as forced settings the API and
+# UI refuse to change, so the file is the source of truth and drift is not
+# possible. Two deliberate exceptions, both because something else owns them:
+#   - misc.dnsmasq_lines  — owned by scripts/sync-dns.sh
+#   - adlists and the allow/deny lists — gravity.db, not FTL config. The
+#     adlists below are asserted through the API; the allow/deny/group/client
+#     rules are a one-time Teleporter seed from dionysus (see the playbook).
+#
+# Secrets live in ansible-vault. Add to group_vars/all.yaml, e.g.:
+#   ansible-vault encrypt_string "$(openssl rand -base64 24)" \
+#     --name vault_pihole_password >> ansible/group_vars/all.yaml
+# The same value must exist in Consul KV at pihole/password — jobs/pihole-backup.hcl
+# and scripts/sync-dns.sh both read it from there:
+#   consul kv put pihole/password '<value>'
+
+pihole_deploy_dir: /opt/pihole
+pihole_timezone: Europe/Dublin
+
+# Web UI / API port. 80, 443 and 8443 belong to Traefik on these nodes.
+pihole_web_port: 8053
+pihole_password: "{{ vault_pihole_password }}"
+
+# Copied from dionysus, IPv6 first, and the order is load-bearing rather than a
+# preference. The line is DS-Lite with the IPv4-in-IPv6 tunnel disabled by the
+# ISP, so IPv6 is the only native transit: the v4 entries below are reachable
+# only through the tailscale exit node, which needs the tailnet, which needs
+# headscale over IPv6. They are a degraded path, NOT an independent fallback —
+# if IPv6 recursion is failing, the v4 upstreams are almost certainly failing
+# too. Treat "no IPv6" as "no DNS" and fix it at the router.
+# See docs/DNS.md and docs/Headscale.md.
+pihole_upstreams:
+  - "2606:4700:4700::1111"
+  - "2606:4700:4700::1001"
+  - "2620:fe::fe"
+  - "2620:fe::9"
+  - "9.9.9.9"
+  - "149.112.112.112"
+  - "1.1.1.1"
+  - "1.0.0.1"
+
+# Literal static records. Per-node records (the .internal and .ts.dbyte.xyz
+# names of every inventory host) are computed by the playbook from
+# ansible_host and tailnet_ipv4 — do not restate them here.
+pihole_static_hosts:
+  - "192.168.0.5 dionysus.internal"
+
+# Static /etc/hosts pins for the control plane, so tailscaled can find it
+# regardless of resolver state. Hand-maintained until 2026-09-09.
+#
+# The IPv6 entry is the one that matters: the line is DS-Lite with the
+# IPv4-in-IPv6 tunnel disabled by the ISP, so home has no native IPv4 transit
+# and 141.147.74.4 is unreachable until the tailnet is already up. IPv6 is the
+# only path that can bootstrap it. The IPv4 entries are here for after the UCG
+# cutover (redesign Phase 7) and cost nothing meanwhile.
+# See docs/Headscale.md — never disable IPv6 on these nodes to work around a
+# v6 fault.
+pihole_headscale_pins:
+  - "141.147.74.4 headscale.dbyte.xyz"
+  - "141.147.74.4 headplane.dbyte.xyz"
+  - "2603:c020:c014:4eff::10 headscale.dbyte.xyz"
+  - "2603:c020:c014:4eff::10 headplane.dbyte.xyz"
+
+# Resolvers each node falls back to, appended after the two Pi-holes in
+# /etc/resolv.conf. dionysus is here only for the soak: drop it (leaving an
+# empty list) when the old Pi-hole is retired.
+pihole_fallback_resolvers:
+  - "192.168.0.5"
+
+# Seeded from dionysus. `block` lists only; Pi-hole also supports `allow`.
+#
+# These are asserted through the Pi-hole API on a best-effort basis: adlists
+# live in gravity.db rather than FTL config, and the Teleporter seed imports
+# them alongside the allow/deny rules, so this list is as much a written record
+# of what should be subscribed as it is the mechanism. If the reconcile step
+# warns, DNS is still fully deployed — only the subscriptions are unmanaged.
+pihole_adlists:
+  - https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts
+  - https://raw.githubusercontent.com/PolishFiltersTeam/KADhosts/master/KADhosts.txt
+  - https://raw.githubusercontent.com/FadeMind/hosts.extras/master/add.Spam/hosts
+  - https://v.firebog.net/hosts/static/w3kbl.txt
+  - https://adaway.org/hosts.txt
+  - https://v.firebog.net/hosts/AdguardDNS.txt
+  - https://v.firebog.net/hosts/Admiral.txt
+  - https://raw.githubusercontent.com/anudeepND/blacklist/master/adservers.txt
+  - https://s3.amazonaws.com/lists.disconnect.me/simple_ad.txt
+  - https://v.firebog.net/hosts/Easylist.txt
+  - https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&showintro=0&mimetype=plaintext
+  - https://raw.githubusercontent.com/FadeMind/hosts.extras/master/UncheckyAds/hosts
+  - https://raw.githubusercontent.com/bigdargon/hostsVN/master/hosts
+  - https://v.firebog.net/hosts/Easyprivacy.txt
+  - https://v.firebog.net/hosts/Prigent-Ads.txt
+  - https://raw.githubusercontent.com/FadeMind/hosts.extras/master/add.2o7Net/hosts
+  - https://raw.githubusercontent.com/crazy-max/WindowsSpyBlocker/master/data/hosts/spy.txt
+  - https://hostfiles.frogeye.fr/firstparty-trackers-hosts.txt
+  - https://raw.githubusercontent.com/DandelionSprout/adfilt/master/Alternate%20versions%20Anti-Malware%20List/AntiMalwareHosts.txt
+  - https://s3.amazonaws.com/lists.disconnect.me/simple_malvertising.txt
+  - https://bitbucket.org/ethanr/dns-blacklists/raw/8575c9f96e5b4a1308f2f12394abd86d0927a4a0/bad_lists/Mandiant_APT1_Report_Appendix_D.txt
+  - https://phishing.army/download/phishing_army_blocklist_extended.txt
+  - https://gitlab.com/quidsup/notrack-blocklists/raw/master/notrack-malware.txt
+  - https://raw.githubusercontent.com/Spam404/lists/master/main-blacklist.txt
+  - https://raw.githubusercontent.com/FadeMind/hosts.extras/master/add.Risk/hosts
+  - https://urlhaus.abuse.ch/downloads/hostfile/

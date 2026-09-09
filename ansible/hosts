@@ -28,5 +28,11 @@ worker.cloud
 [headscale]
 worker.cloud
 
+# The two redundant home resolvers. Both are also Nomad clients, but DNS is
+# deployed outside Nomad — see ansible/playbooks/pihole.yaml.
+[pihole]
+hermes
+zeus
+
 [relay]
 observability.cloud

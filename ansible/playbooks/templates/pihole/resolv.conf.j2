@@ -1,0 +1,20 @@
+# Managed by ansible/playbooks/pihole.yaml — edits here are overwritten.
+#
+# systemd-resolved's stub listener is disabled on this host (it cannot share
+# :53 with FTL's wildcard listener), so this is a real file rather than the
+# usual symlink into /run/systemd/resolve.
+#
+# The partner node's Pi-hole comes first deliberately: it keeps the cross-node
+# path exercised on every lookup, so a broken peer surfaces immediately instead
+# of lying dormant until this node's own resolver fails. The cost is a
+# timeout:1 penalty per lookup while the peer is down — bounded below, and the
+# reason the retry budget is this tight.
+{% for peer in pihole_peers %}
+nameserver {{ hostvars[peer].ansible_host }}
+{% endfor %}
+nameserver {{ ansible_host }}
+{% for fallback in pihole_fallback_resolvers %}
+nameserver {{ fallback }}
+{% endfor %}
+search node.consul service.consul internal
+options timeout:1 attempts:2 edns0 trust-ad

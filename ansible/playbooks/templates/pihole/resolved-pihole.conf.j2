@@ -1,0 +1,9 @@
+# Managed by ansible/playbooks/pihole.yaml — edits here are overwritten.
+#
+# Replaces the docker.conf drop-in this node used to carry. FTL binds
+# 0.0.0.0:53, which cannot coexist with resolved's stub on 127.0.0.53 or its
+# extra listener on 172.17.0.1, so the stub goes away entirely and
+# /etc/resolv.conf becomes a static file. Containers keep resolving because the
+# Docker daemon's `dns` is 172.17.0.1 and FTL now answers there.
+[Resolve]
+DNSStubListener=no

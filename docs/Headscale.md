@@ -49,9 +49,14 @@ regardless of resolver state. Add them to any new node.
 
 ```
 # /etc/hosts
+141.147.74.4             headscale.dbyte.xyz
+141.147.74.4             headplane.dbyte.xyz
 2603:c020:c014:4eff::10  headscale.dbyte.xyz
 2603:c020:c014:4eff::10  headplane.dbyte.xyz
 ```
+
+These are managed by `ansible/playbooks/pihole.yaml` from
+`pihole_headscale_pins` — do not hand-edit them.
 
 This is not about MagicDNS being circular — LAN nodes reach the Pi-hole
 directly over `br0`, so they resolve fine with the tailnet down. It guards
@@ -59,6 +64,89 @@ against the duller failure that actually bit twice: a record that has not
 propagated, or a negative cache pinning the node to a dead address family.
 On 2026-09-07 Pi-hole held a NODATA for the new AAAA for the full 1800s SOA
 minimum, so every LAN node kept trying IPv4 that no longer existed.
+
+**The IPv6 entry is the load-bearing one, and it is the only one that can
+bootstrap the tailnet from cold.** Virgin Media runs this line as DS-Lite with
+the IPv4-in-IPv6 tunnel disabled on their side, so the house has *no native
+IPv4 transit at all*. The only IPv4 egress is through a tailscale exit node —
+which needs the tailnet, which needs headscale, which therefore has to be
+reachable over IPv6. `141.147.74.4` is unreachable from home until that chain
+is already up.
+
+So the dependency runs one way only:
+
+```
+native IPv6  →  headscale  →  tailnet  →  exit node  →  IPv4 egress
+```
+
+**Never "fix" a v6 problem on these nodes by disabling IPv6.** It is the only
+way out of the house. If IPv6 is broken, the house is offline — repair it at
+the router rather than routing around it on the hosts.
+
+The IPv4 entries are kept alongside for the day home gets real IPv4 (the UCG
+cutover, redesign Phase 7), at which point they stop being decoration. They
+cost nothing now: `getaddrinfo` prefers the AAAA regardless.
+
+Note that `host` and `dig` query DNS directly and never show you what the pin
+is doing — only `getent hosts headscale.dbyte.xyz` reflects what tailscaled
+will actually resolve.
+
+`headscale.dbyte.xyz` holds both an A (`141.147.74.4`) and an AAAA
+(`2603:c020:c014:4eff::10`), both grey-clouded, both asserted in
+`terraform/cloudflare/records.tf`. The AAAA is a hand-assigned Oracle VCN
+address: if it ever changes, update `pihole_headscale_pins` **before** the old
+one stops answering, or the house has no path back onto the tailnet.
+
+### Enabling IPv6 forwarding purges the default route
+
+Writing `net.ipv6.conf.all.forwarding=1` makes the host a router, and the
+kernel reacts by purging every RA-derived default route and ignoring later RAs
+unless `accept_ra` is `2`. Because IPv6 is the only transit here, that single
+sysctl can take a home node completely off the network — no IPv6, so no
+headscale, so no tailnet, so no IPv4 egress either.
+
+`ansible/playbooks/tailscale.yaml` sets that sysctl. Two things keep it safe,
+and both are load-bearing:
+
+- `accept_ra=2` is set **before** forwarding, so the node can re-accept an RA
+  after the purge.
+- Neither task uses `reload: true`. That runs `sysctl -p`, which rewrites every
+  value unconditionally — so even a no-op run re-applied `forwarding=1` and
+  purged the route. `sysctl_set` applies the live value by itself.
+
+If it happens anyway, restore transit immediately rather than waiting for the
+next unsolicited RA:
+
+```sh
+ip -6 route show default                    # empty is the symptom
+sysctl -w net.ipv6.conf.all.accept_ra=2
+ip -6 route add default via <router-link-local> dev <iface>   # br0 on hermes
+```
+
+`rdisc6 -1 <iface>` solicits an RA directly if `ndisc6` is installed — but note
+that installing it needs working transit, which is the thing that is broken, so
+the manual route is the reliable move.
+
+### The router must advertise SLAAC, not stateful DHCPv6
+
+hermes and zeus take their global IPv6 by SLAAC — their addresses are EUI-64
+derived (`…:6600:6aff:fe95:b28b`, the `ff:fe` giveaway), and neither runs a
+DHCPv6 client. Switching the router's DHCPv6 server to **stateful** clears the
+autonomous flag in its Router Advertisements, so SLAAC stops producing an
+address while the RA keeps installing a default route. The nodes end up with a
+v6 default route and no usable source address, which looks exactly like
+"tailscale is up but cannot reach the coordination server".
+
+Keep the router on SLAAC (or SLAAC plus *stateless* DHCPv6 for options only —
+M=0, A=1, O=1). Check what it is actually advertising from a node:
+
+```sh
+sudo apt install ndisc6
+rdisc6 -1 br0        # want: Stateful address conf. = No, Autonomous conf. = Yes
+ip -6 addr show dev br0 scope global
+ip -6 route show default
+ping6 -c2 2606:4700:4700::1111
+```
 
 The separate, real SPOF is `dns.nameservers.global` in
 `external/headscale/config.yaml` — a single LAN address that **remote** clients
@@ -156,12 +244,50 @@ ID | Hostname | Approved        | Available                       | Serving (Pri
 1  | hermes   | 0.0.0.0/0, ::/0 | 0.0.0.0/0, ::/0, 192.168.0.0/24 | 0.0.0.0/0, ::/0
 ```
 
-That state breaks every tailnet client's DNS, because `dns.nameservers.global`
-in `external/headscale/config.yaml` is `192.168.0.5` — an address only reachable
-*through* that subnet route. It also blinds the Gatus `internal` check group,
-which reaches 192.168.0.0/24 the same way, so the failure does not alert.
+It also blinds the Gatus `internal` check group, which reaches 192.168.0.0/24
+the same way, so the failure does not alert.
+
+Tailnet DNS no longer depends on this. `dns.nameservers.global` used to be
+`192.168.0.5`, an address only reachable *through* the subnet route, so an
+unapproved route took every client's DNS with it. It is now the two Pi-holes'
+tailnet addresses (100.64.0.1 and 100.64.0.8), which are direct peer paths, and
+zeus advertises the subnet as well so the route itself has a second carrier.
 
 For a node that is only a subnet router (not an exit node), omit `0.0.0.0/0` and `::/0`.
+
+Approval is no longer a manual step: the second play in
+`ansible/playbooks/tailscale.yaml` recomputes the full desired set from
+`host_vars` and calls `approve-routes` for any node that has drifted. Change
+`tailscale_advertise_routes` or `tailscale_exit_node` there, re-run the
+playbook, and the approval follows.
+
+### Hand-built hosts carry a duplicate tailscale apt source
+
+zeus and worker were installed by hand before they were adopted into the
+`[tailscale]` group, so they carry the source file from Tailscale's official
+instructions *and* the one the `artis3n.tailscale` role writes. apt refuses to
+choose between two entries for the same suite with different keyring paths:
+
+```
+E: Conflicting values set for option Signed-By regarding source
+   https://pkgs.tailscale.com/stable/... : /usr/share/keyrings/tailscale-archive-keyring.gpg !=
+```
+
+The role's apt task fails on that, before it reaches `tailscale up`, so the run
+leaves the host untouched rather than half-configured. hermes and
+observability never had the hand-added file and are unaffected.
+
+Park both files and let the role recreate the one it manages:
+
+```sh
+grep -rn pkgs.tailscale.com /etc/apt/sources.list /etc/apt/sources.list.d/
+sudo mkdir -p /root/apt-backup
+sudo mv /etc/apt/sources.list.d/tailscale.* /root/apt-backup/
+sudo apt update
+```
+
+`ansible/playbooks/apt-update.yaml` hits the same wall on those hosts, so this
+is worth clearing rather than working around.
 
 ## Workstations are not Ansible-managed
 
@@ -284,7 +410,7 @@ ssh ubuntu@141.147.74.4 \
   'sudo docker exec headscale headscale nodes list --config /var/lib/headscale/config.yaml'
 ```
 
-Both hostnames stay excluded from `scripts/sync-pihole-dns.sh` — they must
+Both hostnames stay excluded from `scripts/sync-dns.sh` — they must
 resolve to the public address everywhere, including on the LAN, or a node on the
 home network would try to reach the control plane over the tailnet it is trying
 to join.
