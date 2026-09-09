@@ -1,4 +1,6 @@
 ---
+tailnet_ipv4: 100.64.0.9
+
 # worker runs the control plane, so it takes neither DNS nor routes from the
 # tailnet it serves.
 tailscale_accept_dns: false

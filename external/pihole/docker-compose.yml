@@ -1,0 +1,37 @@
+# One of the two redundant home resolvers (hermes and zeus).
+#
+# Deliberately not a Nomad job: DNS must come up before, and stay up
+# independently of, the scheduler. A Nomad client that cannot resolve cannot
+# pull an image or render a Consul template, so a resolver scheduled by Nomad
+# is a dependency loop waiting for a cold boot to expose it.
+#
+# host networking rather than published ports, for three reasons:
+#   - FTL must answer on the LAN address, the tailnet address and docker0
+#     (the Docker daemon's `dns` is 172.17.0.1) from one listener,
+#   - `server=/consul/127.0.0.1#8600` in dnsmasq_lines needs the host's
+#     loopback to reach the local Consul agent's DNS port,
+#   - client addresses stay real, so per-client stats and group rules mean
+#     something.
+#
+# Settings come from .env as FTLCONF_* — Pi-hole v6 treats those as forced
+# values that the API and UI cannot override, which is what makes this
+# config-as-code. misc.dnsmasq_lines is the one setting deliberately left
+# mutable: scripts/sync-dns.sh owns it.
+services:
+  pihole:
+    # Pinned: an unattended resolver upgrade is an unattended DNS outage.
+    image: pihole/pihole:2026.07.2
+    container_name: pihole
+    restart: unless-stopped
+    network_mode: host
+    env_file:
+      - .env
+    volumes:
+      - ./etc-pihole:/etc/pihole
+    cap_add:
+      # FTL renices itself to -10; without this it logs a failure every start.
+      - SYS_NICE
+      # Binding :53 as a non-root user inside the image.
+      - NET_BIND_SERVICE
+    # No healthcheck here on purpose: the image ships its own, and a hand-rolled
+    # one that guesses which DNS client is inside it only invents false alarms.

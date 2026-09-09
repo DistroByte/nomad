@@ -17,14 +17,13 @@
 #        ansible-vault encrypt_string '<key>' --name vault_tailscale_authkey \
 #          >> ansible/group_vars/all.yaml
 #
-# After running this playbook, approve the advertised subnet routes in headscale.
-# This is a MANUAL step — no playbook does it, and `tailscale_args` carries
-# --reset, so a re-register can leave routes advertised but unapproved:
-#   ssh ubuntu@141.147.74.4 'sudo docker exec headscale headscale \
-#     --config /var/lib/headscale/config.yaml nodes list-routes --identifier <id>'
-#   ssh ubuntu@141.147.74.4 'sudo docker exec headscale headscale \
-#     --config /var/lib/headscale/config.yaml nodes approve-routes \
-#     --identifier <id> --routes 192.168.0.0/24,0.0.0.0/0,::/0'
+# Route approval is handled by the second play below, not by hand. It matters
+# that it is automated: `tailscale_args` carries --reset, so a re-register
+# leaves routes advertised but unapproved, and `approve-routes` REPLACES the
+# node's whole approved set rather than adding to it — approving a subnet on a
+# node that is also an exit node silently revokes the exit route unless every
+# desired route is passed in the same call. The play always computes the full
+# union from host_vars, which is what removes that footgun.
 - name: Install and connect Tailscale
   hosts: tailscale
   become: true
@@ -43,5 +42,81 @@
         - net.ipv4.ip_forward
         - net.ipv6.conf.all.forwarding
 
+    - name: Keep accepting router advertisements despite forwarding
+      # Enabling net.ipv6.conf.all.forwarding makes the host a router, and the
+      # kernel then ignores RAs unless accept_ra is 2 ("overrule forwarding").
+      # On the home nodes that is not cosmetic: the line is DS-Lite with the
+      # IPv4 tunnel disabled, so the SLAAC address and RA default route are the
+      # only transit out of the house, and losing them on a cold boot means no
+      # IPv6, therefore no headscale, therefore no tailnet, therefore no IPv4
+      # either. See docs/Headscale.md.
+      ansible.posix.sysctl:
+        name: net.ipv6.conf.all.accept_ra
+        value: "2"
+        sysctl_set: true
+        state: present
+        reload: true
+
   roles:
     - artis3n.tailscale.machine
+
+- name: Approve the advertised routes in headscale
+  hosts: headscale
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Read the registered nodes
+      ansible.builtin.command:
+        argv: [docker, exec, headscale, headscale, --config, /var/lib/headscale/config.yaml, nodes, list, --output, json]
+      register: headscale_nodes
+      changed_when: false
+
+    - name: Work out what each node should have approved
+      # The full set, derived from the same host_vars that decide what the node
+      # advertises: anything absent here is revoked by the approve call below.
+      ansible.builtin.set_fact:
+        headscale_route_plan: >-
+          {{
+            headscale_route_plan | default([]) + [{
+              'host': item,
+              'name': hostvars[item].tailscale_hostname,
+              'routes': (
+                (hostvars[item].tailscale_advertise_routes | default('') | split(',') | select | list)
+                + (['0.0.0.0/0', '::/0'] if hostvars[item].tailscale_exit_node | default(false) else [])
+              ),
+            }]
+          }}
+      loop: "{{ groups['tailscale'] }}"
+
+    - name: Approve the union of desired routes
+      ansible.builtin.command:
+        argv:
+          - docker
+          - exec
+          - headscale
+          - headscale
+          - --config
+          - /var/lib/headscale/config.yaml
+          - nodes
+          - approve-routes
+          - --identifier
+          - "{{ node.id | string }}"
+          - --routes
+          - "{{ item.routes | join(',') }}"
+      loop: "{{ headscale_route_plan }}"
+      loop_control:
+        label: "{{ item.name }} -> {{ item.routes | join(',') }}"
+      vars:
+        # The trailing [{}] keeps `first` defined for a node that is in the
+        # inventory but not yet registered, which is normal mid-rollout.
+        node: >-
+          {{ ((headscale_nodes.stdout | from_json)
+              | selectattr('given_name', 'equalto', item.name) | list + [{}]) | first }}
+      when:
+        - node.id is defined
+        # Revoking down to nothing would need `--routes ""`, which no host in
+        # this estate wants; a node with no desired routes is simply left alone.
+        - item.routes | length > 0
+        - (node.approved_routes | default([]) | sort) != (item.routes | sort)
+      changed_when: true

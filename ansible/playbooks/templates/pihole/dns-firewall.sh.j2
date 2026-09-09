@@ -1,0 +1,59 @@
+#!/bin/sh
+# Managed by ansible/playbooks/pihole.yaml — edits here are overwritten.
+#
+# The home nodes deliberately run no general host firewall (INPUT policy is
+# ACCEPT; they sit behind the router and have no public IPv4). This script is
+# the one exception, and it touches port 53 only.
+#
+# It exists because FTL listens on the wildcard address, and the home line is
+# DS-Lite: br0 carries a globally routable IPv6 address. Without these rules
+# the resolver would be reachable from the internet over IPv6 the moment the
+# router's inbound policy changed, which is exactly how open resolvers end up
+# in amplification traffic.
+#
+# Rules are rebuilt from scratch on every run so their order is deterministic:
+# every ACCEPT is deleted, re-inserted at the head of INPUT, and the catch-all
+# DROP is appended at the tail.
+set -eu
+
+readonly COMMENT="pihole-dns"
+
+v4_allow='{{ pihole_dns_allow_v4 | join(" ") }}'
+v6_allow='{{ pihole_dns_allow_v6 | join(" ") }}'
+
+purge() {
+    ipt="$1"
+    # Read the live ruleset back and delete exactly what a previous run added.
+    # The comment carries no spaces, so word-splitting the saved rule is safe.
+    "$ipt"-save 2>/dev/null | grep -F -- "--comment ${COMMENT}" | sed 's/^-A /-D /' |
+        while read -r rule; do
+            # shellcheck disable=SC2086  # the saved rule is a whole argument list
+            "$ipt" $rule 2>/dev/null || true
+        done
+}
+
+allow() {
+    ipt="$1"
+    src="$2"
+    for proto in udp tcp; do
+        "$ipt" -I INPUT 1 -s "$src" -p "$proto" --dport 53 \
+            -m comment --comment "${COMMENT}" -j ACCEPT
+    done
+}
+
+deny_rest() {
+    ipt="$1"
+    for proto in udp tcp; do
+        "$ipt" -A INPUT -p "$proto" --dport 53 \
+            -m comment --comment "${COMMENT}" -j DROP
+    done
+}
+
+purge iptables
+purge ip6tables
+
+for src in $v4_allow; do allow iptables "$src"; done
+for src in $v6_allow; do allow ip6tables "$src"; done
+
+deny_rest iptables
+deny_rest ip6tables

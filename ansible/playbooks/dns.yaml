@@ -1,0 +1,134 @@
+---
+# Pushes the split-DNS records generated from jobs/ to the two resolvers that
+# serve them: the Pi-hole pair for LAN and subnet-routed clients, and headscale
+# for roaming ones.
+#
+# scripts/sync-dns.sh is the generator and the only place the Host() rules are
+# read; this playbook is the delivery mechanism. Run it whenever a job's Host()
+# rule changes — the untracked .git/hooks/post-commit does the Pi-hole half
+# automatically, but only ansible pushes the headscale half.
+#
+# Deploy:
+#   ansible-playbook ansible/playbooks/dns.yaml
+- name: Generate the records
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  tasks:
+    - name: Render the dnsmasq lines and the headscale extra records
+      ansible.builtin.command:
+        cmd: "{{ playbook_dir }}/../../scripts/sync-dns.sh {{ item }}"
+      register: dns_artefacts
+      changed_when: false
+      loop:
+        - dnsmasq
+        - extra-records
+
+    - name: Keep the generated records for the later plays
+      ansible.builtin.set_fact:
+        dns_dnsmasq_lines: "{{ dns_artefacts.results[0].stdout_lines }}"
+        dns_extra_records: "{{ dns_artefacts.results[1].stdout }}"
+
+- name: Push the dnsmasq lines to both Pi-holes
+  hosts: pihole
+  become: true
+  gather_facts: false
+  serial: 1
+
+  vars:
+    pihole_api: "http://127.0.0.1:{{ pihole_web_port }}/api"
+
+  tasks:
+    - name: Log in to the local API
+      ansible.builtin.uri:
+        url: "{{ pihole_api }}/auth"
+        method: POST
+        body_format: json
+        body:
+          password: "{{ pihole_password }}"
+      register: dns_pihole_auth
+      no_log: true
+      changed_when: false
+
+    - name: Replace misc.dnsmasq_lines
+      # A whole-array PATCH, so anything not generated is removed. FTL validates
+      # the resulting dnsmasq config and refuses the change rather than
+      # restarting into a broken state.
+      ansible.builtin.uri:
+        url: "{{ pihole_api }}/config"
+        method: PATCH
+        headers:
+          X-FTL-SID: "{{ dns_pihole_auth.json.session.sid }}"
+        body_format: json
+        body:
+          config:
+            misc:
+              dnsmasq_lines: "{{ hostvars['localhost'].dns_dnsmasq_lines }}"
+      changed_when: true
+
+    - name: Confirm the resolver still answers for a generated name
+      ansible.builtin.command:
+        argv:
+          - dig
+          - +short
+          - +timeout=2
+          - "@127.0.0.1"
+          - vault.dbyte.xyz
+      register: dns_pihole_verify
+      changed_when: false
+      failed_when: dns_pihole_verify.stdout | trim == ''
+
+    - name: Close the API session
+      ansible.builtin.uri:
+        url: "{{ pihole_api }}/auth"
+        method: DELETE
+        headers:
+          X-FTL-SID: "{{ dns_pihole_auth.json.session.sid }}"
+        status_code: [200, 204, 410]
+      changed_when: false
+
+- name: Push the extra records to the control plane
+  hosts: headscale
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Stage the extra records next to their destination
+      # Same filesystem as the destination, so the move below is atomic.
+      ansible.builtin.copy:
+        content: "{{ hostvars['localhost'].dns_extra_records }}\n"
+        dest: "{{ headscale_deploy_dir }}/data/.extra-records.json.new"
+        owner: root
+        group: root
+        mode: "0644"
+      register: dns_extra_staged
+
+    - name: Move the extra records into place  # noqa: no-handler
+      # headscale watches this path with fsnotify and reloads on change. It must
+      # be replaced by rename, never written in place: a partial write is a
+      # parse error, and headscale issue #2753 is exactly that failure.
+      ansible.builtin.command:
+        argv:
+          - mv
+          - "{{ headscale_deploy_dir }}/data/.extra-records.json.new"
+          - "{{ headscale_deploy_dir }}/data/extra-records.json"
+      when: dns_extra_staged.changed
+      changed_when: true
+
+    - name: Drop the staged copy when nothing changed
+      ansible.builtin.file:
+        path: "{{ headscale_deploy_dir }}/data/.extra-records.json.new"
+        state: absent
+      when: not dns_extra_staged.changed
+
+    - name: Confirm the control plane took the records
+      # headscale logs a parse failure and keeps serving the previous set, so
+      # a successful reload has to be asserted rather than assumed.
+      ansible.builtin.command:
+        argv: [docker, logs, --since, 30s, headscale]
+      register: dns_headscale_logs
+      changed_when: false
+      failed_when: >-
+        dns_headscale_logs.stdout ~ dns_headscale_logs.stderr
+        is search('(?i)(extra.?record).*(error|failed|invalid)')
