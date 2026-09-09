@@ -70,6 +70,22 @@
         - net.ipv4.ip_forward
         - net.ipv6.conf.all.forwarding
 
+    - name: Keep apt on IPv4 where a real IPv4 address exists
+      # The cloud hosts have public IPv4, so apt has no reason to care about
+      # IPv6 — but it prefers AAAA, and a blackholed IPv6 route (see the
+      # forwarding note above) turns that preference into an apt task that
+      # hangs for minutes with working IPv4 sitting unused. The home nodes are
+      # deliberately excluded: IPv6 is their only transit, so forcing IPv4
+      # there would break apt outright rather than speed it up.
+      when: inventory_hostname not in groups['home']
+      ansible.builtin.copy:
+        content: |
+          Acquire::ForceIPv4 "true";
+        dest: /etc/apt/apt.conf.d/99-force-ipv4
+        owner: root
+        group: root
+        mode: "0644"
+
     - name: Wait for the IPv6 default route before touching anything else
       # The home nodes have no other transit, and the next task the role runs
       # is apt. Without this check a purged default route surfaces as an apt
