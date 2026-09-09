@@ -129,10 +129,19 @@
         mode: "0644"
       register: pihole_resolved_conf
 
-    - name: Remove the superseded docker stub-listener drop-in
+    - name: Remove the resolved drop-ins the stub listener made pointless
+      # docker.conf published the stub on 172.17.0.1 for containers, and
+      # consul.conf routed ~consul to the local agent. With DNSStubListener=no
+      # nothing reaches resolved at all, so both are inert — and consul.conf is
+      # actively misleading, because `.consul` is now served by the
+      # server=/consul/127.0.0.1#8600 line that scripts/sync-dns.sh emits.
+      # Rolling this back means restoring both: see docs/DNS.md.
       ansible.builtin.file:
-        path: /etc/systemd/resolved.conf.d/docker.conf
+        path: "/etc/systemd/resolved.conf.d/{{ item }}"
         state: absent
+      loop:
+        - docker.conf
+        - consul.conf
       register: pihole_resolved_docker_conf
 
     - name: Check how /etc/resolv.conf is currently provided
@@ -232,6 +241,15 @@
           retries: 30
           delay: 2
           changed_when: false
+
+        - name: Drop the legacy adlists file the image migrates from
+          # The container writes /etc/pihole/adlists.list on a fresh volume and
+          # migrates it into gravity.db on the first gravity run. Leaving it
+          # behind implies adlists are file-driven when they are rows in the
+          # database, managed below.
+          ansible.builtin.file:
+            path: "{{ pihole_deploy_dir }}/etc-pihole/adlists.list"
+            state: absent
 
         - name: Check whether gravity has ever been built
           ansible.builtin.stat:

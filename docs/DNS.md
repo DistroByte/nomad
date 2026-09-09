@@ -258,12 +258,19 @@ back the way it was, in this order:
 
 ```sh
 # 1. Give systemd-resolved its stub listener back, including the docker0 extra
-#    that the Docker daemon's `dns: 172.17.0.1` depends on.
+#    that the Docker daemon's `dns: 172.17.0.1` depends on, and the consul
+#    routing the Pi-hole forwarder was doing in its place.
 sudo rm -f /etc/systemd/resolved.conf.d/pihole.conf
 sudo tee /etc/systemd/resolved.conf.d/docker.conf >/dev/null <<'EOF'
 [Resolve]
 DNSStubListener=yes
 DNSStubListenerExtra=172.17.0.1
+EOF
+sudo tee /etc/systemd/resolved.conf.d/consul.conf >/dev/null <<'EOF'
+[Resolve]
+DNS=127.0.0.1:8600
+DNSSEC=false
+Domains=~consul node.consul service.consul
 EOF
 
 # 2. Stop FTL so :53 is free for the stub listener.
