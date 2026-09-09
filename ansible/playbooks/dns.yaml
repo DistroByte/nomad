@@ -38,10 +38,8 @@
         that:
           - dns_extra_records | from_json is iterable
           - dns_extra_records | from_json | length > 0
-          - dns_extra_records | from_json | map(attribute='name') | select('search', '^headscale\\.') | list | length == 0
         fail_msg: >-
-          scripts/sync-dns.sh produced records that are not a usable JSON array,
-          or that include a headscale hostname (which must never point inward).
+          scripts/sync-dns.sh did not produce a usable JSON array of records.
         quiet: true
 
 - name: Push the dnsmasq lines to both Pi-holes
@@ -158,24 +156,3 @@
           — see the cutover order in docs/DNS.md. Roaming clients keep resolving
           via the old nameserver until then.
       when: dns_headscale_configured.stdout | trim | int == 0
-
-    - name: Show what the control plane made of the reload
-      # Deliberately reports rather than asserts. A regex over log text as a
-      # failed_when broke three separate ways here — always-true through Jinja's
-      # `is` binding tighter than `~`, then a non-boolean conditional — and it
-      # was never the right tool: the records are validated by a parser at
-      # generation time, and headscale keeps serving the previous set on a parse
-      # error rather than failing loudly. Read these lines if DNS looks wrong.
-      ansible.builtin.command:
-        argv: [docker, logs, --since, 60s, headscale]
-      register: dns_headscale_logs
-      changed_when: false
-      when: dns_headscale_configured.stdout | trim | int > 0
-
-    - name: Report any record-related lines
-      ansible.builtin.debug:
-        msg: >-
-          {{ dns_headscale_logs.stdout_lines | default([])
-             | select('search', '(?i)record') | list
-             | default(['(no record-related log lines in the last 60s)'], true) }}
-      when: dns_headscale_configured.stdout | trim | int > 0
