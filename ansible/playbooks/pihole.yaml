@@ -233,6 +233,54 @@
           delay: 2
           changed_when: false
 
+        - name: Check whether gravity has ever been built
+          ansible.builtin.stat:
+            path: "{{ pihole_deploy_dir }}/etc-pihole/gravity.db"
+          register: pihole_gravity_db
+
+        - name: Build gravity now that DNS is available
+          # The image tries this itself on a fresh volume and cannot succeed:
+          # it runs gravity *before* starting FTL, gravity needs DNS to download
+          # the blocklists, and with host networking the container inherits a
+          # resolv.conf whose entries are this node's own not-yet-started FTL,
+          # a peer that has no resolver yet, and dionysus. It gives up after
+          # 120s, leaving FTL serving queries with no gravity.db — which looks
+          # healthy from a dig but means no blocking, and makes every
+          # /api/lists call fail, because adlists are rows in that database.
+          #
+          # Here it works, because FTL is answering by this point.
+          ansible.builtin.command:
+            argv: [docker, exec, pihole, pihole, -g]
+          when: not pihole_gravity_db.stat.exists
+          changed_when: true
+          timeout: 600
+
+        - name: Make FTL open the database it has been failing to find
+          # `pihole -g` writes the file and signals a reload, but FTL never had
+          # a handle on gravity.db in the first place — it had been logging
+          # "Cannot read gravity database" once a second since start — and the
+          # signal alone does not recover from that. Without this explicit
+          # reload FTL keeps answering queries with nothing blocked, and every
+          # /api/lists call returns HTTP 400, because the API reads gravity
+          # *through* FTL rather than off disk.
+          ansible.builtin.command:
+            argv: [docker, exec, pihole, pihole, reloadlists]
+          when: not pihole_gravity_db.stat.exists
+          changed_when: true
+
+        - name: Require the container to report healthy
+          # "Does a dig answer?" was too weak an assertion: FTL served queries
+          # perfectly while having no gravity.db at all, so the resolver looked
+          # fine and was not. The image's own healthcheck is the stronger
+          # signal, and nothing else in this estate watches it.
+          ansible.builtin.command:
+            argv: [docker, inspect, pihole, --format, "{{ '{{' }} .State.Health.Status {{ '}}' }}"]
+          register: pihole_health
+          until: pihole_health.stdout | trim == 'healthy'
+          retries: 12
+          delay: 5
+          changed_when: false
+
       rescue:
         # A bare "timed out after 60s" says nothing about which of the three
         # plausible causes it was — FTL refusing the config, FTL not binding
