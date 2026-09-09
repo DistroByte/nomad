@@ -255,18 +255,19 @@
           changed_when: true
           timeout: 600
 
-        - name: Make FTL open the database it has been failing to find
-          # `pihole -g` writes the file and signals a reload, but FTL never had
-          # a handle on gravity.db in the first place — it had been logging
-          # "Cannot read gravity database" once a second since start — and the
-          # signal alone does not recover from that. Without this explicit
-          # reload FTL keeps answering queries with nothing blocked, and every
-          # /api/lists call returns HTTP 400, because the API reads gravity
-          # *through* FTL rather than off disk.
-          ansible.builtin.command:
-            argv: [docker, exec, pihole, pihole, reloadlists]
+        - name: Restart so FTL initialises against a database that exists
+          # `pihole -g` writes the file and signals a reload, but FTL started
+          # with no gravity.db at all — logging "Cannot read gravity database"
+          # once a second — and no signal recovers from that properly.
+          # `pihole reloadlists` is enough to get blocking working, but leaves
+          # FTL holding the file read-only, so every write through the API
+          # fails with "attempt to write a readonly database". A restart is the
+          # only thing that gets a clean read-write handle, and it is safe here
+          # because serial:1 means the partner node is already serving.
+          community.docker.docker_compose_v2:
+            project_src: "{{ pihole_deploy_dir }}"
+            state: restarted
           when: not pihole_gravity_db.stat.exists
-          changed_when: true
 
         - name: Require the container to report healthy
           # "Does a dig answer?" was too weak an assertion: FTL served queries
@@ -311,8 +312,14 @@
         - name: Report why the resolver did not come up
           ansible.builtin.fail:
             msg: |
-              {{ inventory_hostname }}'s Pi-hole did not answer for
-              {{ inventory_hostname }}.internal within 60s.
+              Bringing up {{ inventory_hostname }}'s Pi-hole failed at:
+              "{{ ansible_failed_task.name | default('unknown task') }}"
+              — {{ ansible_failed_result.msg | default('no message') }}
+
+              Read that before the diagnostics below: this rescue covers the
+              whole startup sequence, so the failure may be the resolver not
+              answering, gravity not building, or the container not reporting
+              healthy. They have quite different fixes.
 
               This node is now half-configured: the systemd-resolved stub
               listener is off and /etc/resolv.conf is the static file, so it is
@@ -366,15 +373,17 @@
           changed_when: false
 
         - name: Add the missing adlists
+          # `type` is a query parameter, not a body field: sent in the body it
+          # is rejected with "Specify type parameter (should be either allow or
+          # block)". Verified against Pi-hole v6.4.3 / FTL v6.7.
           ansible.builtin.uri:
-            url: "{{ pihole_api }}/lists"
+            url: "{{ pihole_api }}/lists?type=block"
             method: POST
             headers:
               X-FTL-SID: "{{ pihole_auth.json.session.sid }}"
             body_format: json
             body:
               address: "{{ item }}"
-              type: block
               enabled: true
             status_code: [200, 201]
           loop: "{{ pihole_adlists | difference(pihole_lists_live) }}"
