@@ -372,6 +372,52 @@
           register: pihole_lists
           changed_when: false
 
+        - name: Give FTL a writable gravity handle before changing any lists
+          # Any FTL that started before gravity.db existed holds it read-only
+          # for the life of the process, so writes fail with "attempt to write a
+          # readonly database" — a 400, indistinguishable at a glance from the
+          # parameter error above. Building the database does not clear it and
+          # neither does `pihole reloadlists`; only a restart does.
+          #
+          # Conditioned on there being actual list work to do, so an unchanged
+          # run never dips DNS, and skipped when the bootstrap above already
+          # restarted for us.
+          when:
+            - pihole_gravity_db.stat.exists
+            - (pihole_adlists | difference(pihole_lists_live) | length > 0)
+              or (pihole_lists_live | difference(pihole_adlists) | length > 0)
+          block:
+            - name: Restart the resolver
+              community.docker.docker_compose_v2:
+                project_src: "{{ pihole_deploy_dir }}"
+                state: restarted
+
+            - name: Wait for it to answer again
+              ansible.builtin.command:
+                argv:
+                  - dig
+                  - +short
+                  - +timeout=2
+                  - +tries=1
+                  - "@127.0.0.1"
+                  - "{{ inventory_hostname }}.internal"
+              register: pihole_dig_again
+              until: pihole_dig_again.rc == 0 and pihole_dig_again.stdout | trim == ansible_host
+              retries: 30
+              delay: 2
+              changed_when: false
+
+            - name: Re-authenticate, since the restart dropped the session
+              ansible.builtin.uri:
+                url: "{{ pihole_api }}/auth"
+                method: POST
+                body_format: json
+                body:
+                  password: "{{ pihole_password }}"
+              register: pihole_auth
+              no_log: true
+              changed_when: false
+
         - name: Add the missing adlists
           # `type` is a query parameter, not a body field: sent in the body it
           # is rejected with "Specify type parameter (should be either allow or
