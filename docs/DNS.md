@@ -250,6 +250,48 @@ docs/Headscale.md for the check.
 The same applies to dionysus while it is still serving: its recursion runs
 entirely on its IPv6 upstreams.
 
+## Rollback: undoing the resolver surgery on one node
+
+`pihole.yaml` changes three things that a failed FTL start leaves in a bad
+state, and `docker compose down` alone does not undo any of them. To put a node
+back the way it was, in this order:
+
+```sh
+# 1. Give systemd-resolved its stub listener back, including the docker0 extra
+#    that the Docker daemon's `dns: 172.17.0.1` depends on.
+sudo rm -f /etc/systemd/resolved.conf.d/pihole.conf
+sudo tee /etc/systemd/resolved.conf.d/docker.conf >/dev/null <<'EOF'
+[Resolve]
+DNSStubListener=yes
+DNSStubListenerExtra=172.17.0.1
+EOF
+
+# 2. Stop FTL so :53 is free for the stub listener.
+sudo docker compose -f /opt/pihole/docker-compose.yml down
+
+# 3. Restore resolv.conf as the symlink resolved manages.
+sudo rm -f /etc/resolv.conf
+sudo ln -s /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
+sudo systemctl restart systemd-resolved
+
+# 4. Drop the port-53 rules. The script only adds them, so remove by hand.
+sudo systemctl disable --now pihole-dns-firewall.service
+sudo iptables-save  | grep -F -- '--comment pihole-dns' | sed 's/^-A /-D /' \
+  | while read -r r; do sudo iptables  $r; done
+sudo ip6tables-save | grep -F -- '--comment pihole-dns' | sed 's/^-A /-D /' \
+  | while read -r r; do sudo ip6tables $r; done
+
+# 5. Confirm.
+resolvectl status | grep -A2 '^Global'
+dig +short vault.dbyte.xyz
+sudo docker run --rm alpine getent hosts deb.debian.org
+```
+
+Step 4 last, and step 1 first, is deliberate: while the DROP is in place and no
+resolver is listening, the node has no DNS at all except its `resolv.conf`
+fallbacks. Note that the container check in step 5 is the one people forget —
+the docker0 stub listener is what every Nomad task resolves through.
+
 ## Break-glass: both resolvers unreachable
 
 `dns.nameservers.global` is deliberately the two Pi-holes and nothing else, so
