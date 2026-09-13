@@ -24,8 +24,8 @@ provider "cloudflare" {}
 
 variable "relay_ipv4" {
   type        = string
-  default     = "132.226.210.138"
-  description = "observability.cloud — the public ingress today. At the UCG cutover decision gate this may become the home WAN IP."
+  default     = "185.152.73.180"
+  description = "The home WAN IP — public ingress since the Blacknight FTTH line replaced the DS-Lite service that made inbound forwarding impossible. Was observability.cloud (132.226.210.138) until the cutover; the off-site relay no longer fronts the apexes."
 }
 
 variable "worker_ipv4" {

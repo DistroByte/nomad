@@ -4,12 +4,17 @@
 # load-bearing for the redesign; everything else (MX, TXT/SPF, vanity zones)
 # arrives via the import.
 #
-# Verified current shape (2026-09-08):
-#   dbyte.xyz apex          A      -> relay (132.226.210.138)
+# Verified current shape (2026-09-08, apex targets updated at the 2026-09-14
+# ingress cutover):
+#   dbyte.xyz apex          A      -> home WAN (185.152.73.180, var.relay_ipv4)
 #   *.dbyte.xyz             CNAME  -> dbyte.xyz          <- the wildcard Phase 4 removes
 #   headscale.dbyte.xyz     A      -> worker (141.147.74.4)
-#   james-hackett.ie apex   A      -> relay
+#   james-hackett.ie apex   A      -> home WAN
 #   photo.james-hackett.ie  CNAME  -> james-hackett.ie   (no wildcard on this zone)
+#
+# Every apex now resolves to the house, so the wildcard drags every name —
+# mumble.dbyte.xyz included — onto the home router's forwarding table. That
+# matters for voice: see the note on mumble in ../README.md.
 #
 # The post-split per-name public set lives in records-phase4.tf.example.
 #
