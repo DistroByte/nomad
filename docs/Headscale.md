@@ -55,13 +55,15 @@ regardless of resolver state. Add them to any new node.
 2603:c020:c014:4eff::10  headplane.dbyte.xyz
 ```
 
-These are managed by `ansible/playbooks/pihole.yaml` from
-`pihole_headscale_pins` — do not hand-edit them.
+These are managed by `ansible/playbooks/hosts-records.yaml` from
+`hosts_headscale_pins` in `group_vars/nomad.yaml` — do not hand-edit them.
+(They moved there on 2026-09-14 when `pihole.yaml`, which used to own them as a
+side-effect, was deleted along with the Pi-hole pair.)
 
-This is not about MagicDNS being circular — LAN nodes reach the Pi-hole
-directly over `br0`, so they resolve fine with the tailnet down. It guards
-against the duller failure that actually bit twice: a record that has not
-propagated, or a negative cache pinning the node to a dead address family.
+This is not about MagicDNS being circular — LAN nodes reach dionysus directly
+over `br0`, so they resolve fine with the tailnet down. It guards against the
+duller failure that actually bit twice: a record that has not propagated, or a
+negative cache pinning the node to a dead address family.
 On 2026-09-07 Pi-hole held a NODATA for the new AAAA for the full 1800s SOA
 minimum, so every LAN node kept trying IPv4 that no longer existed.
 
@@ -410,10 +412,11 @@ ssh ubuntu@141.147.74.4 \
   'sudo docker exec headscale headscale nodes list --config /var/lib/headscale/config.yaml'
 ```
 
-Both hostnames stay excluded from `scripts/sync-dns.sh` — they must
-resolve to the public address everywhere, including on the LAN, or a node on the
-home network would try to reach the control plane over the tailnet it is trying
-to join.
+Both hostnames must resolve to the public address everywhere, including on the
+LAN, or a node on the home network would try to reach the control plane over the
+tailnet it is trying to join. `scripts/sync-dns.sh` used to enforce this by
+excluding them; with that generator gone the `/etc/hosts` pins above are what
+guarantees it.
 
 Once nodes are back, remove the old job spec's CSI volume only after confirming
 the new deployment is healthy; it is the only copy of the pre-migration state.

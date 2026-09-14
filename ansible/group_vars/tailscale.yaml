@@ -10,8 +10,8 @@ tailscale_exit_node: false
 # LAN sends it via tailscale0 and black-holes it.
 tailscale_accept_routes: true
 
-# False on worker: MagicDNS forwards to the LAN Pi-hole, and the control plane
-# must not depend on the tailnet it serves.
+# False on worker: MagicDNS forwards to the LAN resolver (dionysus), and the
+# control plane must not depend on the tailnet it serves.
 tailscale_accept_dns: true
 
 # Unix user allowed to run tailscale without sudo. Workstations only.

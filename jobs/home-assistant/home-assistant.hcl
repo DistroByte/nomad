@@ -70,6 +70,19 @@ job "home-assistant" {
           target = "/config/backups"
           source = "/backups/home-assistant"
         }
+
+        # Bluetooth. HA never opens /dev/hci* itself — it drives the host's
+        # BlueZ daemon over the system D-Bus socket, so the host owns the
+        # adapter and this mount is the whole of the container's access to it.
+        # Read-only is enough: the bus socket is bidirectional regardless, and
+        # the flag only stops the container writing into /run/dbus itself.
+        # Requires bluetoothd on the host — see ansible/playbooks/bluetooth.yaml.
+        mount {
+          type     = "bind"
+          target   = "/run/dbus"
+          source   = "/run/dbus"
+          readonly = true
+        }
       }
 
       volume_mount {

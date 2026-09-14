@@ -30,8 +30,15 @@ same day.
 | Paperless full export | `exporter` task in `jobs/paperless/paperless.hcl` | `/backups/paperless` | restic-offsite |
 | Immich Postgres dumps | `jobs/immich/immich-backup.hcl` (03:00) | CSI `immich-postgres-backup` | restic-offsite |
 | Ghost/photo MySQL dumps | `jobs/photo-site/photo-backup.hcl` (04:00) | CSI `photo-mysql-backup` | restic-offsite |
-| Pi-hole Teleporter export | `jobs/pihole-backup.hcl` (04:00) | `/backups/pihole` | restic-offsite |
 | Home Assistant / z2m backups | the apps themselves | `/backups/{home-assistant,zigbee2mqtt}` | restic-offsite |
+
+The Pi-hole pair on hermes/zeus was decommissioned on 2026-09-14 and its
+Teleporter backup job removed with it. **dionysus (192.168.0.5) is now the only
+resolver and nothing backs it up** — it is a Synology package outside this
+repo's reach, so its blocklists, groups and local records exist in exactly one
+place. Export it by hand from the UI, or give it a job, before treating the
+table above as complete. A final snapshot of the decommissioned pair's data
+sits in `/backups/decommissioned/pihole-{hermes,zeus}-20260914.tar.gz`.
 
 `restic-offsite` runs at 05:00 and ships everything above (plus anything else
 under `/backups`) to B2. Every producer POSTs a Gatus heartbeat on success —

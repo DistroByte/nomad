@@ -10,18 +10,28 @@
 #                           set to false when the URL already serves a binary .gpg key
 
 - name: Download {{ apt_repo_name }} GPG key
+  # The armored key is kept under /etc/apt/keyrings rather than /tmp so its
+  # content is comparable between runs: that is what makes an upstream key
+  # rotation show up as a change here instead of passing silently.
   become: true
   ansible.builtin.get_url:
     url: "{{ apt_repo_gpg_url }}"
-    dest: "{{ '/tmp/' + apt_repo_name + '.gpg' if (apt_repo_dearmor | default(true)) else '/etc/apt/keyrings/' + apt_repo_name + '.gpg' }}"
+    dest: "{{ '/etc/apt/keyrings/' + apt_repo_name + '.asc' if (apt_repo_dearmor | default(true)) else '/etc/apt/keyrings/' + apt_repo_name + '.gpg' }}"
     mode: "0644"
+    force: true
+  register: apt_repo_key
 
 - name: Dearmor {{ apt_repo_name }} GPG key
+  # Runs unconditionally and overwrites, so a rotated upstream key replaces the
+  # stored one. This previously carried `creates:` on the output keyring, which
+  # meant the task skipped forever once the file existed — HashiCorp's rotation
+  # to D55C0D1A… then broke `apt-get update` on every node with no way for the
+  # playbook to repair it. `changed_when` is tied to the download so a run that
+  # fetches an identical key still reports ok.
   become: true
   ansible.builtin.command:
-    cmd: "gpg --batch --yes --dearmor -o /etc/apt/keyrings/{{ apt_repo_name }}.gpg /tmp/{{ apt_repo_name }}.gpg"
-    creates: "/etc/apt/keyrings/{{ apt_repo_name }}.gpg"
-  changed_when: false
+    cmd: "gpg --batch --yes --dearmor -o /etc/apt/keyrings/{{ apt_repo_name }}.gpg /etc/apt/keyrings/{{ apt_repo_name }}.asc"
+  changed_when: apt_repo_key.changed
   when: apt_repo_dearmor | default(true)
 
 - name: Set permissions on {{ apt_repo_name }} GPG key

@@ -1,0 +1,72 @@
+---
+# Owns the /etc/hosts records the Nomad clients need to resolve locally.
+#
+# These used to be a side-effect of ansible/playbooks/pihole.yaml, which wrote
+# the headscale pins while it was busy owning the whole resolver. That playbook
+# is gone with the Pi-hole pair, so the records need a home of their own — they
+# were never really about Pi-hole, and leaving them unowned means a rebuilt node
+# silently loses name resolution that other things depend on.
+#
+# Two sets, for different reasons:
+#
+#   * The node .internal names. FTL served these to every container on the
+#     bridge; with FTL gone, systemd-resolved answers them from here instead —
+#     it reads /etc/hosts and serves the result on 127.0.0.53 and on the
+#     DNSStubListenerExtra at 172.17.0.1, which is what the Docker daemon hands
+#     containers. jobs/molecule.hcl and jobs/immich/immich.hcl resolve node
+#     names this way, and both break without it.
+#
+#   * The headscale control plane. tailscaled resolves its control URL through
+#     getaddrinfo, which honours /etc/hosts — so pinning it here keeps a node
+#     able to reach the control plane even when DNS is unavailable, which is
+#     exactly the situation a node is in while its own resolution is broken.
+#     Note that `host` and `dig` bypass /etc/hosts, so this pin is invisible to
+#     the obvious check.
+#
+# Deploy:
+#   ansible-playbook ansible/playbooks/hosts-records.yaml
+- name: Maintain local host records
+  hosts: nomad
+  become: true
+  gather_subset:
+    - '!hardware'
+  tasks:
+    - name: Pin the node and control-plane names in /etc/hosts
+      ansible.builtin.blockinfile:
+        path: /etc/hosts
+        marker: "# {mark} ANSIBLE MANAGED: local host records"
+        block: "{{ (hosts_internal_records + hosts_headscale_pins) | join('\n') }}"
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Confirm the names resolve through the stub resolver
+      # Checked via getent rather than dig on purpose: dig talks to the
+      # nameserver directly and never consults /etc/hosts, so it would pass
+      # whether or not this playbook achieved anything.
+      ansible.builtin.command:
+        argv:
+          - getent
+          - hosts
+          - "{{ item }}"
+      register: hosts_records_verify
+      changed_when: false
+      failed_when: hosts_records_verify.rc != 0
+      loop:
+        - zeus.internal
+        - hermes.internal
+
+    - name: Confirm containers can resolve them too
+      # The bridge listener is the half that actually matters for Nomad tasks
+      # and the half that is easy to break without noticing, because the host
+      # keeps working fine either way.
+      ansible.builtin.command:
+        argv:
+          - dig
+          - +short
+          - +timeout=2
+          - "@172.17.0.1"
+          - zeus.internal
+      register: hosts_records_bridge
+      changed_when: false
+      failed_when: hosts_records_bridge.stdout | trim == ''

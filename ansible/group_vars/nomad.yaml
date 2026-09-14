@@ -8,3 +8,17 @@ arch_map:
 
 nomad_host_volumes: []
 nomad_usb_plugin_enabled: false
+
+# Consumed by ansible/playbooks/hosts-records.yaml. These lived in the old
+# group_vars/pihole.yaml; they are node facts rather than resolver facts, so
+# they outlived the Pi-hole pair that happened to serve them.
+hosts_internal_records:
+  - "192.168.0.3 zeus.internal"
+  - "192.168.0.4 hermes.internal"
+  - "192.168.0.5 dionysus.internal"
+
+hosts_headscale_pins:
+  - "141.147.74.4 headscale.dbyte.xyz"
+  - "141.147.74.4 headplane.dbyte.xyz"
+  - "2603:c020:c014:4eff::10 headscale.dbyte.xyz"
+  - "2603:c020:c014:4eff::10 headplane.dbyte.xyz"

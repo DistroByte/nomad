@@ -29,12 +29,22 @@ dns:
   base_domain: ts.dbyte.xyz
   nameservers:
     global:
-      # Both home Pi-holes, by tailnet address. Roaming clients ask
-      # 100.100.100.100, tailscaled forwards here, and the answer arrives over a
-      # direct peer path — no dependence on a subnet route being advertised,
-      # approved, or up.
-      - 100.64.0.1
-      - 100.64.0.8
+      # dionysus, the only remaining resolver. The hermes/zeus Pi-hole pair that
+      # used to sit here (100.64.0.1 / 100.64.0.8) was decommissioned on
+      # 2026-09-14 and neither node answers on :53 any more.
+      #
+      # This is a LAN address, not a tailnet one, because dionysus is not a
+      # tailnet node. That is a real regression from the pair: reaching it now
+      # depends on hermes advertising 192.168.0.0/24 and that route being
+      # approved and up, where the old entries resolved over a direct peer path
+      # and depended on neither. Putting tailscale on the NAS would restore the
+      # stronger guarantee.
+      #
+      # Still deliberately one entry and no public fallback: a fallback would
+      # answer `.internal` and `.consul` names publicly instead of failing, and
+      # would quietly bypass blocking. See the break-glass note in docs/DNS.md
+      # for what to do when home is unreachable.
+      - 192.168.0.5
 
   # Answers for private service names, served straight out of the control plane
   # so a roaming client resolves them even before it can reach a resolver.

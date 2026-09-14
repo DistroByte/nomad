@@ -68,7 +68,17 @@ Two independent tracks until the UCG phase: **Track N** (network/DNS/ingress) an
 - OCI: `import {}` blocks + `-generate-config-out`, hand-tidy. `prevent_destroy` on both instances. Tighten security lists (replace allow-all v4+v6): 22/tcp, 80/443/tcp, 64738 tcp+udp, **41641/udp (tailscale direct — required before Phase 5)**, ICMP/ICMPv6. Egress open. Create backup bucket (unused for now). Import reveals observability's shape → capacity gate for Phase 5 (if 1GB E2.1.Micro is too tight for consul+nomad servers, swap to always-free A1.Flex 1-OCPU/6GB — arm64 fine, it runs no workloads).
 - Cloudflare: import existing records. **Verify the suspected `*.dbyte.xyz` wildcard A record**, then replace with per-name records at the relay IP for exactly the public set: `immich`, `request`, `share`, `mumble`, `headscale`, `headplane` .dbyte.xyz; the four vanity apexes + www; `photo`/`admin-photo`/apex james-hackett.ie; `pint.ing`. Private names → NXDOMAIN publicly. Keep wildcard DNS-01 certs (private hostnames stay out of CT logs).
 
-### Phase 3 — DNS layer (Track N)
+### Phase 3 — DNS layer (Track N) — **REVERSED 2026-09-14**
+
+> Everything in this phase shipped on 2026-09-08 and was removed six days later.
+> The Pi-hole pair, `ansible/playbooks/{pihole,dns}.yaml`, `external/pihole/`,
+> `group_vars/pihole.yaml`, `scripts/sync-dns.sh` and `jobs/pihole-backup.hcl`
+> no longer exist; dionysus is the sole resolver again. The pair was not
+> redundant in practice — both nodes received identical resolver surgery, so one
+> nsswitch defect took out both at once and the Nomad cluster with them.
+> **`docs/DNS.md` is the current description; the rest of this phase is kept as
+> a record of what was tried and why it was undone.** Any future revisit should
+> start from that write-up, not from the bullets below.
 - **Two Pi-holes**: new `external/pihole/docker-compose.yml` (pinned image, 53 tcp/udp, web on 8053 — 80/8443 are Traefik's), `FTLCONF_dns_listeningMode=all`; new `ansible/playbooks/pihole.yaml` (headscale.yaml shape: docker, compose sync, firewall allowing 53 from LAN + 100.64.0.0/10, `DNSStubListener=no`), new `[pihole]` group = hermes+zeus, `group_vars/pihole.yaml` holds adlists/upstreams/static `.internal` records as data (one-time Teleporter seed from dionysus). Config-as-code, no gravity-sync/nebula-sync (UI becomes read-only by convention; nebula-sync is a drop-in later if that chafes).
 - **Generator**: `scripts/sync-pihole-dns.sh` → `scripts/sync-dns.sh`, same `Host()` source of truth, three outputs: dnsmasq lines → both Pi-hole APIs; `extra-records.json` (A records → hermes/zeus **tailnet** IPs from the new `tailnet_ipv4` host_vars); static `.internal` records. Keep excluding headscale/headplane names. Wrapped in new `ansible/playbooks/dns.yaml`: generate locally, push to both Pi-holes, atomic copy of the JSON to `worker.cloud:/opt/headscale/data/extra-records.json` (headscale hot-reloads via fsnotify — write temp + rename; issue #2753).
 - **Headscale config**: add `dns.extra_records_path` + change `dns.nameservers.global` to both Pi-hole tailnet IPs. NB: deployed config is seeded `force: false` (headplane edits in place) — hand-apply to `/opt/headscale/data/config.yaml` + restart container, mirror in repo copy.
@@ -136,7 +146,7 @@ In `external/gatus/config.yaml` (+ playbook rerun):
 |---|---|
 | Cluster templates | `ansible/playbooks/templates/{consul/consul.hcl.j2,consul/consul.service,nomad/nomad-base.hcl.j2,nomad/nomad-server.hcl.j2,nomad/nomad-client.hcl.j2,nomad/nomad.service}`, `ansible/playbooks/configure-nomad-consul.yaml` |
 | Inventory/vars | `ansible/hosts`, `ansible/group_vars/{all,tailscale,pihole(new)}.yaml`, `ansible/host_vars/*.yaml` (new `tailnet_ipv4`, `nomad_client_enabled`) |
-| DNS | `external/pihole/` (new), `ansible/playbooks/{pihole,dns}.yaml` (new), `scripts/sync-dns.sh` (replaces sync-pihole-dns.sh), `external/headscale/config.yaml` |
+| DNS | `ansible/playbooks/hosts-records.yaml`, `external/headscale/config.yaml`, `docs/DNS.md` — the Phase 3 files (`external/pihole/`, `ansible/playbooks/{pihole,dns}.yaml`, `scripts/sync-dns.sh`) were deleted on 2026-09-14 |
 | Ingress | `jobs/traefik.hcl`, per-job tag edits (public list above), `ansible/playbooks/templates/relay/stream.conf.j2`, `ansible/group_vars/relay.yaml` |
 | Backups | `jobs/vaultwarden/vaultwarden.hcl`, `jobs/paperless/paperless.hcl`, `jobs/backup/restic-offsite.hcl` (new), `ansible/playbooks/headscale.yaml`, `docs/Disaster-Recovery.md` (new) |
 | Terraform | `terraform/{oci,cloudflare}/` (new) |

@@ -84,7 +84,7 @@ DOMAIN=mumble.dbyte.xyz
 CERTPATH=/certs
 
 # Query public resolvers directly for the propagation check so the container's
-# Docker/Pi-hole resolver chain can't return NODATA for the challenge record.
+# Docker/systemd-resolved chain can't return NODATA for the challenge record.
 if [ -f "$CERTPATH/certificates/$DOMAIN.crt" ]; then
   "$LEGO" --accept-tos --email "$CLOUDFLARE_EMAIL" \
     --dns cloudflare --dns.resolvers 1.1.1.1:53 --dns.resolvers 8.8.8.8:53 \

@@ -1,0 +1,83 @@
+---
+# Brings up the host Bluetooth stack that Home Assistant drives over D-Bus.
+#
+# HA runs privileged with host networking and talks to BlueZ through the system
+# bus rather than opening /dev/hci* itself, so the adapter is owned by the host
+# and the container only needs /run/dbus bind-mounted in (see
+# jobs/home-assistant/home-assistant.hcl). Nothing here is HA-specific beyond
+# that: the host simply needs a running bluetoothd and a powered controller.
+#
+# This targets the whole `nomad` group rather than a single host on purpose.
+# Both clients carry an Intel 8087:0a2b controller, and HA's placement follows
+# the Zigbee dongle's device constraint (1cf1/usb/0030) rather than a hostname,
+# so pinning Bluetooth to one node would break the day the dongle moves.
+#
+# Deploy:
+#   ansible-playbook ansible/playbooks/bluetooth.yaml
+- name: Enable the host Bluetooth stack
+  hosts: nomad
+  become: true
+  gather_subset:
+    - '!hardware'
+  tasks:
+    - name: Install BlueZ and rfkill
+      # rfkill is not pulled in by bluez and is not present on these hosts, but
+      # it is the only way to clear a soft block below.
+      ansible.builtin.apt:
+        name:
+          - bluez
+          - rfkill
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Power adapters on at boot
+      # Without this a cold boot leaves the controller present but down, so HA
+      # reports no adapters until someone runs `bluetoothctl power on` by hand.
+      # BlueZ moved AutoEnable from [Policy] to [General] in 5.65; write it to
+      # [General] and let the older section stay untouched if it exists.
+      ansible.builtin.lineinfile:
+        path: /etc/bluetooth/main.conf
+        regexp: '^\s*#?\s*AutoEnable\s*='
+        line: "AutoEnable=true"
+        insertafter: '^\[General\]'
+        state: present
+        owner: root
+        group: root
+        mode: "0644"
+      register: bluetooth_autoenable
+
+    - name: Enable and start bluetoothd
+      ansible.builtin.systemd_service:
+        name: bluetooth
+        enabled: true
+        state: started
+
+    - name: Restart bluetoothd if the policy changed  # noqa: no-handler
+      ansible.builtin.systemd_service:
+        name: bluetooth
+        state: restarted
+      when: bluetooth_autoenable.changed
+
+    - name: Unblock the radio
+      # A soft block survives reboots and is invisible unless looked for: the
+      # service starts cleanly, the controller enumerates, and HA still sees
+      # nothing. Unconditional because `rfkill unblock` on an unblocked radio
+      # is a no-op.
+      ansible.builtin.command: rfkill unblock bluetooth
+      changed_when: false
+
+    - name: Read back the controller state
+      ansible.builtin.command: bluetoothctl list
+      register: bluetooth_controllers
+      changed_when: false
+
+    - name: Fail if no controller is present
+      # Catches a missing firmware blob or a hard (physical) rfkill switch,
+      # either of which leaves every task above reporting success.
+      ansible.builtin.fail:
+        msg: >-
+          bluetoothd is running but no controller is present on
+          {{ inventory_hostname }}. Check `dmesg | grep -i bluetooth` for a
+          missing firmware blob, and `rfkill list` for a hard block.
+      when: bluetooth_controllers.stdout | trim | length == 0
