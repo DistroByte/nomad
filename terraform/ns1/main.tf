@@ -19,7 +19,6 @@ terraform {
   }
 }
 
-# Credentials via NS1_APIKEY from ../tf.sh — never in tfvars.
 provider "ns1" {}
 
 variable "relay_ipv4" {

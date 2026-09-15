@@ -19,7 +19,6 @@ terraform {
   }
 }
 
-# Credentials via CLOUDFLARE_API_TOKEN from ../tf.sh — never in tfvars.
 provider "cloudflare" {}
 
 variable "relay_ipv4" {
