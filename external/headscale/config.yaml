@@ -27,6 +27,14 @@ derp:
 dns:
   magic_dns: true
   base_domain: ts.dbyte.xyz
+
+  # Makes short names resolve for roaming clients - the tailnet half of the
+  # search domain, alongside DHCP on the LAN and a resolved drop-in on the
+  # Nomad nodes. Without it the extra_records exist and `hermes` still fails,
+  # because a single-label name never gets qualified. See
+  # docs/adr/0001-resolve-homelab-host-names-with-split-horizon-internal-dns.md
+  search_domains:
+    - internal
   nameservers:
     global:
       # dionysus, the only remaining resolver. The hermes/zeus Pi-hole pair that

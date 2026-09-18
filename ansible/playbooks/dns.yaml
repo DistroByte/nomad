@@ -1,0 +1,102 @@
+---
+# Publishes homelab host names to the resolvers that serve clients, per
+# docs/adr/0001-resolve-homelab-host-names-with-split-horizon-internal-dns.md.
+#
+# The /etc/hosts publisher lives in hosts-records.yaml, because the Nomad nodes
+# need their own names before any resolver is reachable. This playbook covers
+# dionysus, via the Pi-hole API, for LAN clients. It uses dnsmasq host-record,
+# which registers the short and the fully qualified name in one directive - so
+# `hermes` resolves for a LAN client even before the router advertises the
+# `internal` search domain.
+#
+# The headscale extra_records publisher is NOT here yet. It needs SSH to
+# worker.cloud, and that host's IPv4 SSH currently stalls for ~45s per
+# connection while IPv6 is instant, so running it through the inventory as it
+# stands is unreliable. Records were seeded by hand on 2026-09-18; automating
+# this wants ansible_host pointed at the IPv6 address first.
+#
+# The write MERGES. dionysus already carries 20 `address=` lines pointing
+# service names at hermes directly, plus `server=` forwards; those come from the
+# Host() rules in jobs/ and are not this playbook's business. The API replaces
+# the array wholesale, so everything not owned here is read back and preserved.
+#
+# No AAAA records are published. The nodes have no global IPv6 address, and
+# advertising a family that does not work is what caused dionysus' gravity
+# failures and the stalled lookups against headscale.dbyte.xyz. The ADR gates
+# this on a verified address rather than on configuration intent.
+#
+# Deploy:
+#   ansible-playbook ansible/playbooks/dns.yaml
+- name: Publish homelab host names to dionysus
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    pihole_api: "http://192.168.0.5/api"
+  tasks:
+    - name: Build the dnsmasq host-record lines from the inventory
+      # hosts_internal_records in group_vars/nomad.yaml is the source of truth,
+      # in "<address> <name>.internal" form. host-record=<short>,<fqdn>,<addr>
+      # is what makes the bare name resolve as well as the qualified one.
+      ansible.builtin.set_fact:
+        dns_dnsmasq_lines: >-
+          {{ dns_dnsmasq_lines | default([])
+             + ['host-record=' ~ (item.split(' ')[1] | regex_replace('\.internal$', ''))
+                ~ ',' ~ item.split(' ')[1]
+                ~ ',' ~ item.split(' ')[0]] }}
+      loop: "{{ hostvars[groups['nomad'][0]].hosts_internal_records }}"
+
+    - name: Read what dionysus currently serves
+      ansible.builtin.uri:
+        url: "{{ pihole_api }}/config/misc"
+        method: GET
+      register: dns_pihole_current
+
+    - name: Merge ours with everything else already there
+      # Only host-record= lines are ours. address= service records and server=
+      # forwards are left exactly as found.
+      ansible.builtin.set_fact:
+        dns_merged_lines: >-
+          {{ (dns_pihole_current.json.config.misc.dnsmasq_lines
+              | reject('match', '^host-record=') | list)
+             + dns_dnsmasq_lines }}
+
+    - name: Show the change
+      ansible.builtin.debug:
+        msg:
+          adding: "{{ dns_dnsmasq_lines }}"
+          preserved: "{{ dns_merged_lines | length - dns_dnsmasq_lines | length }} existing lines"
+
+    - name: Write them back
+      # FTL validates the resulting dnsmasq config and refuses the change rather
+      # than restarting into a broken state. That is the safety net that makes
+      # writing to the only resolver on the network acceptable.
+      ansible.builtin.uri:
+        url: "{{ pihole_api }}/config"
+        method: PATCH
+        body_format: json
+        body:
+          config:
+            misc:
+              dnsmasq_lines: "{{ dns_merged_lines }}"
+        status_code: [200, 201]
+      changed_when: true
+
+    - name: Confirm the resolver still answers
+      # A generated name, a bare name, and a public one - the last because a bad
+      # dnsmasq line takes out recursion for everything, not just these records.
+      #
+      # Retried because FTL reloads asynchronously after the PATCH returns: the
+      # first run of this failed on hermes.internal purely by racing the reload,
+      # while the same query succeeded moments later.
+      ansible.builtin.command:
+        argv: [dig, +short, "+timeout=3", "@192.168.0.5", "{{ item }}"]
+      register: dns_verify
+      changed_when: false
+      until: dns_verify.stdout | trim != ''
+      retries: 6
+      delay: 5
+      loop:
+        - hermes.internal
+        - hermes
+        - example.com

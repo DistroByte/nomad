@@ -1,27 +1,46 @@
 ---
-# Owns the /etc/hosts records the Nomad clients need to resolve locally.
+# Owns the local name resolution the Nomad clients need, per
+# docs/adr/0001-resolve-homelab-host-names-with-split-horizon-internal-dns.md.
+# This is the /etc/hosts publisher described there, plus the search domain that
+# makes short names work; the dnsmasq and headscale publishers are separate.
 #
-# These used to be a side-effect of ansible/playbooks/pihole.yaml, which wrote
-# the headscale pins while it was busy owning the whole resolver. That playbook
-# is gone with the Pi-hole pair, so the records need a home of their own — they
-# were never really about Pi-hole, and leaving them unowned means a rebuilt node
-# silently loses name resolution that other things depend on.
+# These records used to be a side-effect of ansible/playbooks/pihole.yaml, which
+# wrote them while it was busy owning the whole resolver. That playbook is gone
+# with the Pi-hole pair, so they need a home of their own - leaving them unowned
+# means a rebuilt node silently loses resolution that other things depend on.
 #
-# Two sets, for different reasons:
+# Four sets, for different reasons:
 #
 #   * The node .internal names. FTL served these to every container on the
-#     bridge; with FTL gone, systemd-resolved answers them from here instead —
+#     bridge; with FTL gone, systemd-resolved answers them from here instead -
 #     it reads /etc/hosts and serves the result on 127.0.0.53 and on the
 #     DNSStubListenerExtra at 172.17.0.1, which is what the Docker daemon hands
 #     containers. jobs/molecule.hcl and jobs/immich/immich.hcl resolve node
 #     names this way, and both break without it.
 #
+#   * The tailnet MagicDNS names, generated from each host's tailnet_ipv4.
+#     These nodes run with --accept-dns=false, so they cannot resolve
+#     *.ts.dbyte.xyz through MagicDNS at all. The Pi-holes used to carry these
+#     as static records for exactly this reason; when they went, the
+#     observability.ts.dbyte.xyz heartbeat in jobs/gatus-heartbeat.hcl stopped
+#     resolving and hung rather than failing. Note the label is the hostname up
+#     to the first dot: headscale registers worker.cloud as worker, so the name
+#     is worker.ts.dbyte.xyz. Deriving it any other way produces a record that
+#     does not exist.
+#
 #   * The headscale control plane. tailscaled resolves its control URL through
-#     getaddrinfo, which honours /etc/hosts — so pinning it here keeps a node
+#     getaddrinfo, which honours /etc/hosts - so pinning it here keeps a node
 #     able to reach the control plane even when DNS is unavailable, which is
 #     exactly the situation a node is in while its own resolution is broken.
-#     Note that `host` and `dig` bypass /etc/hosts, so this pin is invisible to
-#     the obvious check.
+#
+#   * The `internal` search domain, so short names resolve. This is not
+#     cosmetic: systemd-resolved does not send single-label names to unicast DNS
+#     at all, it routes them to LLMNR and mDNS. The search domain is what turns
+#     `hermes` into `hermes.internal` before the query leaves, so without it the
+#     records above exist and bare names still fail.
+#
+# `host` and `dig` bypass /etc/hosts, so none of the records here are visible to
+# the obvious check. Verify with getent.
 #
 # Deploy:
 #   ansible-playbook ansible/playbooks/hosts-records.yaml
@@ -31,42 +50,90 @@
   gather_subset:
     - '!hardware'
   tasks:
-    - name: Pin the node and control-plane names in /etc/hosts
+    - name: Build the tailnet MagicDNS records from the inventory
+      # Single source of truth is host_vars' tailnet_ipv4; hosts without one are
+      # skipped rather than guessed at. The label is the inventory hostname
+      # truncated at the first dot, because that is how headscale registers it -
+      # worker.cloud becomes worker.ts.dbyte.xyz, not worker.cloud.ts.dbyte.xyz.
+      ansible.builtin.set_fact:
+        hosts_tailnet_block: >-
+          {{ hosts_tailnet_block | default([])
+             + [hostvars[item].tailnet_ipv4 ~ ' '
+                ~ (item | regex_replace('^([^.]+).*$', '\1'))
+                ~ '.' ~ tailnet_base_domain] }}
+      loop: "{{ groups['tailscale'] | sort }}"
+      when: hostvars[item].tailnet_ipv4 is defined
+
+    - name: Pin the host, tailnet and control-plane names in /etc/hosts
       ansible.builtin.blockinfile:
         path: /etc/hosts
         marker: "# {mark} ANSIBLE MANAGED: local host records"
-        block: "{{ (hosts_internal_records + hosts_headscale_pins) | join('\n') }}"
+        block: "{{ (hosts_internal_records + hosts_tailnet_block + hosts_headscale_pins) | join('\n') }}"
         owner: root
         group: root
         mode: "0644"
 
-    - name: Confirm the names resolve through the stub resolver
-      # Checked via getent rather than dig on purpose: dig talks to the
-      # nameserver directly and never consults /etc/hosts, so it would pass
-      # whether or not this playbook achieved anything.
+    - name: Make short names resolve by adding the internal search domain
+      # Merged with the consul.conf drop-in rather than replacing it, so
+      # .consul routing is untouched.
+      ansible.builtin.copy:
+        content: |
+          # Managed by ansible/playbooks/hosts-records.yaml - edits are overwritten.
+          # Search domain for the homelab host namespace. Without this,
+          # single-label names never reach unicast DNS - resolved sends them to
+          # LLMNR and mDNS instead - so `hermes` fails while `hermes.internal`
+          # works. See docs/adr/0001-*.md.
+          [Resolve]
+          Domains=internal
+        dest: /etc/systemd/resolved.conf.d/search-domains.conf
+        owner: root
+        group: root
+        mode: "0644"
+      register: hosts_records_search
+
+    - name: Apply the search domain  # noqa: no-handler
+      ansible.builtin.systemd_service:
+        name: systemd-resolved
+        state: restarted
+      when: hosts_records_search.changed
+
+    - name: Confirm the fully qualified names resolve
+      # getent rather than dig: dig talks to the nameserver directly and never
+      # consults /etc/hosts, so it would pass whether or not this worked.
       ansible.builtin.command:
-        argv:
-          - getent
-          - hosts
-          - "{{ item }}"
+        argv: [getent, hosts, "{{ item }}"]
       register: hosts_records_verify
       changed_when: false
       failed_when: hosts_records_verify.rc != 0
       loop:
         - zeus.internal
         - hermes.internal
+        - dionysus.internal
+        - "observability.{{ tailnet_base_domain }}"
+
+    - name: Confirm short names resolve
+      # The search domain is the only thing making these work, and it is the
+      # piece most easily lost - it went missing once already when the static
+      # resolv.conf that carried it was deleted.
+      ansible.builtin.command:
+        argv: [getent, hosts, "{{ item }}"]
+      register: hosts_records_short
+      changed_when: false
+      failed_when: hosts_records_short.rc != 0
+      loop:
+        - hermes
+        - zeus
+        - dionysus
 
     - name: Confirm containers can resolve them too
       # The bridge listener is the half that actually matters for Nomad tasks
       # and the half that is easy to break without noticing, because the host
       # keeps working fine either way.
       ansible.builtin.command:
-        argv:
-          - dig
-          - +short
-          - +timeout=2
-          - "@172.17.0.1"
-          - zeus.internal
+        argv: [dig, +short, +timeout=2, "@172.17.0.1", "{{ item }}"]
       register: hosts_records_bridge
       changed_when: false
       failed_when: hosts_records_bridge.stdout | trim == ''
+      loop:
+        - zeus.internal
+        - "observability.{{ tailnet_base_domain }}"
