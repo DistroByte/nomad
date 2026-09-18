@@ -70,14 +70,17 @@
         - net.ipv4.ip_forward
         - net.ipv6.conf.all.forwarding
 
-    - name: Keep apt on IPv4 where a real IPv4 address exists
-      # The cloud hosts have public IPv4, so apt has no reason to care about
-      # IPv6 — but it prefers AAAA, and a blackholed IPv6 route (see the
-      # forwarding note above) turns that preference into an apt task that
-      # hangs for minutes with working IPv4 sitting unused. The home nodes are
-      # deliberately excluded: IPv6 is their only transit, so forcing IPv4
-      # there would break apt outright rather than speed it up.
-      when: inventory_hostname not in groups['home']
+    - name: Keep apt on IPv4
+      # apt prefers AAAA, and a blackholed IPv6 route turns that preference
+      # into a task that hangs for minutes with working IPv4 sitting unused.
+      #
+      # This used to exclude the home nodes, on the grounds that IPv6 was their
+      # only transit and forcing IPv4 would break apt outright. That reversed on
+      # 2026-09-17: the Blacknight FTTH line replaced the DS-Lite service, so
+      # the home nodes now have working IPv4 and *no* global IPv6 address at all
+      # — they hold an RA default route with no usable source address, which is
+      # precisely the blackhole this guards against. They need the setting more
+      # than the cloud hosts do, not less.
       ansible.builtin.copy:
         content: |
           Acquire::ForceIPv4 "true";
@@ -86,31 +89,15 @@
         group: root
         mode: "0644"
 
-    - name: Wait for the IPv6 default route before touching anything else
-      # The home nodes have no other transit, and the next task the role runs
-      # is apt. Without this check a purged default route surfaces as an apt
-      # task hanging for minutes with nothing to explain it.
-      when: inventory_hostname in groups['home']
-      ansible.builtin.command:
-        argv: [ip, -6, route, show, default]
-      register: tailscale_v6_default
-      until: tailscale_v6_default.stdout | trim != ''
-      retries: 12
-      delay: 10
-      changed_when: false
-      failed_when: false
-
-    - name: Fail clearly if IPv6 transit is gone
-      when:
-        - inventory_hostname in groups['home']
-        - tailscale_v6_default.stdout | default('') | trim == ''
-      ansible.builtin.fail:
-        msg: >-
-          No IPv6 default route on {{ inventory_hostname }} after 120s, so this
-          node has no transit at all (DS-Lite here carries no IPv4). Check
-          `rdisc6 -1 <iface>` for a router advertising SLAAC, and
-          `sysctl net.ipv6.conf.all.accept_ra` for the value 2. To restore it by
-          hand: `ip -6 route add default via <router-link-local> dev <iface>`.
+    # REMOVED 2026-09-17: a gate here waited up to 120s for an IPv6 default
+    # route on the home nodes and failed the run if it was absent, because
+    # DS-Lite made IPv6 their only transit — losing it meant no headscale, so no
+    # tailnet, so no IPv4 egress either. The Blacknight FTTH line ended that
+    # dependency: the home nodes reach headscale over IPv4 and currently have no
+    # global IPv6 address at all. Keeping the gate would have been worse than
+    # useless — it passes on the RA default route that is still advertised,
+    # while the address that route needs is missing, so it reported health it
+    # could not actually verify. See docs/DNS.md for the addressing history.
 
   roles:
     - artis3n.tailscale.machine

@@ -12,9 +12,14 @@ tailscale_accept_routes: false
 # zeus serves the tailnet's DNS — same reasoning as hermes.
 tailscale_accept_dns: false
 
-# TEMPORARY while the ISP withholds IPv4. Hostname, not tailnet IP — resolved
-# from the netmap, survives headscale reallocating addresses.
-tailscale_exit_node_use: "observability"
+# The condition this worked around has ended: the Blacknight FTTH line gives
+# this house a public IPv4 (185.152.73.180), so zeus no longer needs to borrow
+# observability's. Left empty rather than removed to document that consuming an
+# exit node here was deliberate, not an oversight.
+#
+# zeus does not advertise itself as an exit node — hermes is the Irish egress
+# (see its host_vars). zeus only needed to stop *consuming* one.
+tailscale_exit_node_use: ""
 
 nomad_host_volumes:
   - name: immich-postgres-replica

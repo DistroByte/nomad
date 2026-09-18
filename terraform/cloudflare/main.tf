@@ -23,8 +23,8 @@ provider "cloudflare" {}
 
 variable "relay_ipv4" {
   type        = string
-  default     = "185.152.73.180"
-  description = "The home WAN IP — public ingress since the Blacknight FTTH line replaced the DS-Lite service that made inbound forwarding impossible. Was observability.cloud (132.226.210.138) until the cutover; the off-site relay no longer fronts the apexes."
+  default     = "132.226.210.138"
+  description = "Public ingress. Back to observability.cloud on 2026-09-18: the Blacknight Genexis router serves its own admin UI on TCP 443 (Device.UserInterface.HTTPAccess.1.Port, writable in the model but not via the UI), so a 443 port-forward can never take effect — Blacknight confirmed external 443 is not possible on that unit and offered PPPoE details for a replacement. Home (185.152.73.180) does forward 80 and 64738 correctly and becomes primary again at the Phase 7 UCG cutover; until then the relay owns the apexes."
 }
 
 variable "worker_ipv4" {
