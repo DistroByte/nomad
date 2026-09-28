@@ -5,6 +5,14 @@ tailscale_advertise_routes: ""
 tailscale_exit_node: true
 tailscale_hostname: observability
 
+# Explicit rather than inherited from the group default, because it is
+# load-bearing and silent when wrong: Gatus probes LAN addresses directly
+# (192.168.0.3:4646, 192.168.0.4:8443, 192.168.0.5), which this host can only
+# reach via the subnet route hermes and zeus advertise. Unlike the home nodes,
+# this one is outside 192.168.0.0/24, so accepting that route is correct here.
+# Flipping it false turns every home check into a timeout.
+tailscale_accept_routes: true
+
 # Do not take DNS from the tailnet. MagicDNS now points at dionysus
 # (192.168.0.5), a LAN address reachable only via hermes' subnet route — so
 # accepting it made this host's DNS depend on the home network it exists to

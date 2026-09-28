@@ -10,6 +10,15 @@ tailnet_ipv4: 100.64.0.1
 # route is load-bearing for tailnet DNS, not just for LAN access.
 tailscale_advertise_routes: "192.168.0.0/24"
 
+# hermes is inside 192.168.0.0/24, the subnet it and zeus advertise. Accepting
+# it put 192.168.0.0/24 dev tailscale0 in tailscaled's table 52, which the
+# `from all lookup 52` rule (pref 5270) consults ahead of main — so every reply
+# to a LAN peer left via tailscale0 sourced from 100.64.0.1 and was dropped with
+# no firewall log and no ICMP error. That black-holed Consul's raft traffic to
+# zeus on 2026-09-23 and cost the cluster stable leadership. zeus was spared
+# only because it already carried this override.
+tailscale_accept_routes: false
+
 # hermes no longer serves DNS, so the original reason for this (a node taking
 # DNS from the tailnet it was resolving for) is gone. It stays false because
 # tailscaled would otherwise overwrite /etc/resolv.conf, and this node resolves
@@ -21,11 +30,12 @@ tailscale_accept_dns: false
 # observability's. Reverting restores hermes as the Irish egress instead of
 # presenting as London.
 #
-# NOT YET APPLIED. The tailnet is administratively down on both nodes
-# (WantRunning=false), so nothing has consumed this change; bringing tailscale
-# up while the old values were live would have sent hermes' traffic — including
-# the ingress path the new port forwards depend on — back out through London.
-# Run ansible/playbooks/tailscale.yaml when bringing the tailnet back up.
+# The gate this was held behind has lifted: the tailnet is no longer
+# administratively down — tailscaled was actively routing on hermes throughout
+# the 2026-09-23 incident, so the WantRunning=false note that used to sit here
+# was stale. Whether a tailscale.yaml run has since consumed these values is not
+# recorded; confirm with `tailscale status --json | jq .Self.ExitNodeOption`
+# before assuming hermes is already the Irish egress.
 #
 # Hostname, not tailnet IP: resolved from the netmap, so it survives headscale
 # reallocating addresses.
