@@ -522,7 +522,7 @@ right width differs: `10.42.0.0/24` where it means *this segment*,
 | `jobs/traefik.hcl:127` | `trustedIPs` — replace `192.168.0.0/16` with `10.42.0.0/16` | `/16` |
 | `jobs/traefik.hcl:240,247` | synodrive and video backends on dionysus | host |
 | `jobs/csi/synology-csi-controller.hcl:41` | DSM client host | host |
-| `jobs/headscale/headscale.hcl:122` | nameserver entry | host |
+| `jobs/archive/headscale/headscale.hcl:122` | nameserver entry (archived — retired job, no live impact) | host |
 | `jobs/paperless/paperless.hcl:77` | `PAPERLESS_ALLOWED_HOSTS` | host |
 | `docs/{DNS,Headscale,Disaster-Recovery,Redesign-Plan}.md`, `docs/adr/0001-*.md` | prose and diagrams | — |
 

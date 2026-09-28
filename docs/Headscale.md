@@ -390,7 +390,7 @@ The playbook refuses to start the stack if they are absent.
 nomad job stop headscale
 
 # 2. Export state to the NFS backup share.
-nomad job run jobs/headscale/headscale-export.hcl
+nomad job run jobs/archive/headscale/headscale-export.hcl
 nomad alloc logs -job headscale-export
 
 # 3. Move it to the new host and unpack.

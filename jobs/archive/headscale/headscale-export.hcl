@@ -7,7 +7,7 @@ job "headscale-export" {
   # single-node-writer, so this will not place while headscale holds it.
   #
   #   nomad job stop headscale
-  #   nomad job run jobs/headscale/headscale-export.hcl
+  #   nomad job run jobs/archive/headscale/headscale-export.hcl
   #   # then, from hermes:
   #   scp /backups/headscale/headscale-state.tar.gz ubuntu@141.147.74.4:/tmp/
   constraint {
