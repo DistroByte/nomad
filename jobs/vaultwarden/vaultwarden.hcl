@@ -50,7 +50,7 @@ job "vaultwarden" {
       shutdown_delay = "5s"
 
       config {
-        image      = "vaultwarden/server:1.37.2"
+        image      = "vaultwarden/server:1.37.4"
         force_pull = true
         ports      = ["http"]
       }
