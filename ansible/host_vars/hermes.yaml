@@ -8,10 +8,10 @@ tailnet_ipv4: 100.64.0.1
 # Carries the route roaming clients use to reach dionysus (192.168.0.5), which
 # is not itself a tailnet node. Since the Pi-hole pair was decommissioned this
 # route is load-bearing for tailnet DNS, not just for LAN access.
-tailscale_advertise_routes: "192.168.0.0/24"
+tailscale_advertise_routes: "10.42.0.0/16,192.168.0.0/24"
 
-# hermes is inside 192.168.0.0/24, the subnet it and zeus advertise. Accepting
-# it put 192.168.0.0/24 dev tailscale0 in tailscaled's table 52, which the
+# hermes is inside the subnets it and zeus advertise. Accepting
+# them put 192.168.0.0/24 dev tailscale0 in tailscaled's table 52, which the
 # `from all lookup 52` rule (pref 5270) consults ahead of main — so every reply
 # to a LAN peer left via tailscale0 sourced from 100.64.0.1 and was dropped with
 # no firewall log and no ICMP error. That black-holed Consul's raft traffic to

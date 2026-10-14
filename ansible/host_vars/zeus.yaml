@@ -4,9 +4,9 @@ tailnet_ipv4: 100.64.0.8
 # Second subnet router, so a roaming client can still reach the LAN when hermes
 # is down. Routes must be approved in headscale afterwards — the post-play in
 # ansible/playbooks/tailscale.yaml does that.
-tailscale_advertise_routes: "192.168.0.0/24"
+tailscale_advertise_routes: "10.42.0.0/16,192.168.0.0/24"
 
-# zeus is inside 192.168.0.0/24, the subnet it and hermes advertise.
+# zeus is inside the subnets it and hermes advertise.
 tailscale_accept_routes: false
 
 # zeus serves the tailnet's DNS — same reasoning as hermes.

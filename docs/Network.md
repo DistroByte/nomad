@@ -15,7 +15,7 @@ page covers why it is shaped the way it is and what is left to do.
 | Infrastructure | still `192.168.0.0/24`: zeus `.3`, hermes `.4`, dionysus `.5` (static on the hosts) |
 | Reservations | usw-lite `10.42.0.2`, uap6 `10.42.0.8`, archdesktop `10.42.0.12` |
 | Resolver | Pi-hole on dionysus. The ERX does no DNS forwarding and resolves via `9.9.9.9` itself |
-| Tailnet routes | `192.168.0.0/24` via zeus and hermes (both must be *approved*, see `docs/Headscale.md`); `10.42.0.0/16` pending |
+| Tailnet routes | `10.42.0.0/16` and `192.168.0.0/24` via zeus (primary) and hermes (standby, also the exit node). Approve the *full* list per node — `approve-routes` replaces it (`docs/Headscale.md`). Neither node accepts routes |
 | IPv6 | off on the ERX. `WANv6_IN`/`WANv6_LOCAL` exist, default drop |
 | Management | `ssh ubnt@10.42.0.1` (also answers on `192.168.0.1`) |
 
@@ -119,9 +119,7 @@ dionysus cannot go first. It is the block storage under most of the cluster:
 The window, in order:
 
 1. Snapshot Consul and Nomad; note server IDs (`/opt/consul/node-id`,
-   `/opt/nomad/server/node-id`). Advertise and approve
-   `10.42.0.0/16,192.168.0.0/24` on zeus and hermes first (hermes also
-   `0.0.0.0/0,::/0`).
+   `/opt/nomad/server/node-id`).
 2. Stop the CSI-backed jobs. Re-point UniFi devices
    (`set-inform http://10.42.0.3:8080/inform`) before and after zeus moves.
 3. dionysus: DSM static `10.42.0.5/24`, gateway `10.42.0.1`, DNS `127.0.0.1`;
