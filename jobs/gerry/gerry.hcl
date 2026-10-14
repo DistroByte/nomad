@@ -40,6 +40,7 @@ job "gerry" {
       tags = [
         "traefik.enable=true",
         "traefik.http.routers.gerry.rule=Host(`gerry.dbyte.xyz`)",
+        "traefik.http.routers.gerry.entrypoints=websecure,websecure-proxied",
       ]
     }
 

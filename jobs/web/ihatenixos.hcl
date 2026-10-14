@@ -27,6 +27,7 @@ job "ihatenixos" {
       tags = [
         "traefik.enable=true",
         "traefik.http.routers.ihatenixos.rule=Host(`ihatenixos.org`)",
+        "traefik.http.routers.ihatenixos.entrypoints=websecure,websecure-proxied",
         "icon=https://ihatenixos.org/favicon.ico",
       ]
     }

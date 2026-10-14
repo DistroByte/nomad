@@ -70,6 +70,7 @@ job "unifi" {
       tags = [
         "traefik.enable=true",
         "traefik.http.routers.unifi.rule=Host(`unifi.dbyte.xyz`)",
+        "traefik.http.routers.unifi.middlewares=internal-only@file",
         # The UI is HTTPS with a self-signed certificate, so Traefik has to
         # speak TLS to it and skip verification (serversTransport in
         # traefik_dynamic.toml).

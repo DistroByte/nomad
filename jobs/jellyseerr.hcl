@@ -27,6 +27,7 @@ job "jellyseerr" {
       tags = [
         "traefik.enable=true",
         "traefik.http.routers.jellyseerr.rule=Host(`request.dbyte.xyz`)",
+        "traefik.http.routers.jellyseerr.entrypoints=websecure,websecure-proxied",
       ]
     }
 

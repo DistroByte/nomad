@@ -38,6 +38,7 @@ job "paperless" {
       tags = [
         "traefik.enable=true",
         "traefik.http.routers.paperless.rule=Host(`paperless.dbyte.xyz`)",
+        "traefik.http.routers.paperless.middlewares=internal-only@file",
         "traefik.http.middlewares.paperless.headers.contentSecurityPolicy=default-src 'self'; img-src 'self' data:"
       ]
     }

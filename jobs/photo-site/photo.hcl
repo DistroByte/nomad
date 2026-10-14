@@ -78,6 +78,7 @@ job "photo" {
       tags = [
         "traefik.enable=true",
         "traefik.http.routers.photo.rule=Host(`photo.james-hackett.ie`) || Host(`admin-photo.james-hackett.ie`)",
+        "traefik.http.routers.photo.entrypoints=websecure,websecure-proxied",
         "icon=https://photo.james-hackett.ie/content/images/size/w256h256/2025/03/J_Profile_Picture_Round.png",
       ]
     }
@@ -249,6 +250,7 @@ EOF
         tags = [
           "traefik.enable=true",
           "traefik.http.routers.photo-analytics.rule=Host(`photo.james-hackett.ie`) && PathRegexp(`^(.*)/\\.ghost/analytics(.*)$`)",
+          "traefik.http.routers.photo-analytics.entrypoints=websecure,websecure-proxied",
           "traefik.http.middlewares.photo-analytics-rewrite.replacepathregex.regex=^(.*)/\\.ghost/analytics(.*)$",
           "traefik.http.middlewares.photo-analytics-rewrite.replacepathregex.replacement=$2",
           "traefik.http.routers.photo-analytics.middlewares=photo-analytics-rewrite",

@@ -27,6 +27,7 @@ job "mediashare" {
       tags = [
         "traefik.enable=true",
         "traefik.http.routers.mediashare.rule=Host(`share.dbyte.xyz`)",
+        "traefik.http.routers.mediashare.entrypoints=websecure,websecure-proxied",
         "traefik.http.routers.mediashare.middlewares=mediashare-auth@file",
         "icon=https://raw.githubusercontent.com/homarr-labs/dashboard-icons/refs/heads/main/png/files.png"
       ]

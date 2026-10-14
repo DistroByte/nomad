@@ -27,6 +27,7 @@ job "nicecocks" {
       tags = [
         "traefik.enable=true",
         "traefik.http.routers.nicecocks.rule=Host(`nicecocks.biz`)",
+        "traefik.http.routers.nicecocks.entrypoints=websecure,websecure-proxied",
         "icon=https://nicecocks.biz/favicon.ico"
       ]
     }

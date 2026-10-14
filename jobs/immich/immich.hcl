@@ -29,6 +29,7 @@ job "immich" {
       tags = [
         "traefik.enable=true",
         "traefik.http.routers.immich.rule=Host(`immich.dbyte.xyz`)",
+        "traefik.http.routers.immich.entrypoints=websecure,websecure-proxied",
       ]
     }
 

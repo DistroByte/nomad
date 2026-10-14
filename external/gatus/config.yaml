@@ -138,12 +138,16 @@ endpoints:
     alerts:
       - type: ntfy
 
+  # Private apps (Traefik internal-only allowlist - the ones with a client
+  # block below) do not resolve publicly once the *.dbyte.xyz wildcard is gone, so they resolve through dionysus and reach
+  # hermes over the subnet route - the path real tailnet clients use. 403 is a
+  # failure here: it means the allowlist rejected the check.
   - name: vault
     group: apps
     url: "https://vault.dbyte.xyz"
     interval: 120s
     conditions:
-      - "[STATUS] == any(200, 301, 302, 307, 401, 403)"
+      - "[STATUS] == any(200, 301, 302, 307, 401)"
     alerts:
       - type: ntfy
 
@@ -159,18 +163,22 @@ endpoints:
   - name: paperless
     group: apps
     url: "https://paperless.dbyte.xyz"
+    client:
+      dns-resolver: "udp://192.168.0.5:53"
     interval: 120s
     conditions:
-      - "[STATUS] == any(200, 301, 302, 307, 401, 403)"
+      - "[STATUS] == any(200, 301, 302, 307, 401)"
     alerts:
       - type: ntfy
 
   - name: actual
     group: apps
     url: "https://actual.dbyte.xyz"
+    client:
+      dns-resolver: "udp://192.168.0.5:53"
     interval: 120s
     conditions:
-      - "[STATUS] == any(200, 301, 302, 307, 401, 403)"
+      - "[STATUS] == any(200, 301, 302, 307, 401)"
     alerts:
       - type: ntfy
 
@@ -179,7 +187,7 @@ endpoints:
     url: "https://ha.dbyte.xyz"
     interval: 120s
     conditions:
-      - "[STATUS] == any(200, 301, 302, 307, 401, 403)"
+      - "[STATUS] == any(200, 301, 302, 307, 401)"
     alerts:
       - type: ntfy
 
@@ -197,7 +205,7 @@ endpoints:
     url: "https://molecule.dbyte.xyz"
     interval: 120s
     conditions:
-      - "[STATUS] == any(200, 301, 302, 307, 401, 403)"
+      - "[STATUS] == any(200, 301, 302, 307, 401)"
     alerts:
       - type: ntfy
 
@@ -206,7 +214,7 @@ endpoints:
     url: "https://drive.dbyte.xyz"
     interval: 120s
     conditions:
-      - "[STATUS] == any(200, 301, 302, 307, 401, 403)"
+      - "[STATUS] == any(200, 301, 302, 307, 401)"
     alerts:
       - type: ntfy
 
@@ -215,7 +223,7 @@ endpoints:
     url: "https://video.dbyte.xyz"
     interval: 120s
     conditions:
-      - "[STATUS] == any(200, 301, 302, 307, 401, 403)"
+      - "[STATUS] == any(200, 301, 302, 307, 401)"
     alerts:
       - type: ntfy
 

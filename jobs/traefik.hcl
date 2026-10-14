@@ -152,10 +152,11 @@ EOF
   # Ingress from the off-site relays. They pass TCP through at L4 and prepend a
   # PROXY protocol header, so the real client address survives; without this
   # entrypoint every request would appear to come from the relay's tailnet IP.
-  # asDefault keeps existing routers serving here with no per-service changes.
+  # Deliberately not asDefault: a router is only reachable through the relay if
+  # its job opts in with entrypoints=websecure,websecure-proxied, so a new
+  # service is private by default rather than public by accident.
   [entryPoints.websecure-proxied]
     address = ":8443"
-    asDefault = true
 
     [entryPoints.websecure-proxied.proxyProtocol]
       trustedIPs = ["100.64.0.0/10"]
@@ -213,8 +214,14 @@ EOF
 [certificatesResolvers.cloudflare.acme]
   email = "jamesthackett1@gmail.com"
   storage = "{{ env "NOMAD_ALLOC_DIR" }}/data/acme.json"
+  # Public resolvers, not the host's: lego finds the zone with an SOA lookup,
+  # and the LAN resolver answers some of these names from split-horizon
+  # overrides. On 2026-10-14 a local= override made james-hackett.ie's SOA
+  # vanish, lego walked up to "ie.", and five failed challenges rate-limited
+  # the wildcard for an hour.
   [certificatesResolvers.cloudflare.acme.dnsChallenge]
     provider = "cloudflare"
+    resolvers = ["1.1.1.1:53", "8.8.8.8:53"]
 
 [certificatesResolvers.ns1.acme]
   email = "james@distrobyte.io"
@@ -232,9 +239,24 @@ EOF
 
       template {
         data = <<EOH
+# Port 443 is forwarded straight from the internet, so websecure carries public
+# and private traffic alike with real client addresses. Every private router
+# carries this; public ones opt in to both entrypoints instead. 10.42.0.0/16 is
+# the renumbered LAN (docs/ERX-Cutover.md) and also covers hairpin-NATed LAN
+# clients, which arrive from the router's LAN address.
+[http.middlewares.internal-only.ipAllowList]
+  sourceRange = [
+    "127.0.0.1/32",
+    "192.168.0.0/24",
+    "10.42.0.0/16",
+    "100.64.0.0/10",
+    "fd7a:115c:a1e0::/48",
+  ]
+
 [http.routers.synodrive]
   rule = "Host(`drive.dbyte.xyz`)"
   service = "synodrive"
+  entryPoints = ["websecure", "websecure-proxied"]
 
 [[http.services.synodrive.loadBalancer.servers]]
   url = "http://192.168.0.5:5002/"
@@ -242,29 +264,45 @@ EOF
 [http.routers.video]
   rule = "Host(`video.dbyte.xyz`)"
   service = "video"
+  entryPoints = ["websecure", "websecure-proxied"]
 
 [[http.services.video.loadBalancer.servers]]
   url = "http://192.168.0.5:8096/"
+
+# Home Assistant is public (remote access from the phone app). Its job also
+# says so (entrypoints tag), but changing any tag on that job forces a
+# destructive update, and the replacement cannot place while the old
+# allocation still holds the ConBee. Until it is redeployed, this shadows its
+# router (higher priority, same service) to put it on the relay entrypoint too.
+# Drop it once home-assistant has been redeployed with the tag.
+[http.routers.homeassistant-public]
+  rule = "Host(`ha.dbyte.xyz`)"
+  service = "hass@consulcatalog"
+  entryPoints = ["websecure", "websecure-proxied"]
+  priority = 1000
 
 [http.routers.photo-activitypub]
   rule = "Host(`photo.james-hackett.ie`) && PathPrefix(`/.ghost/activitypub/`)"
   service = "ghost-activitypub"
   priority = 200
+  entryPoints = ["websecure", "websecure-proxied"]
 
 [http.routers.photo-wellknown]
   rule = "Host(`photo.james-hackett.ie`) && PathRegexp(`^/.well-known/(webfinger|nodeinfo)$`)"
   service = "ghost-activitypub"
   priority = 200
+  entryPoints = ["websecure", "websecure-proxied"]
 
 [[http.services.ghost-activitypub.loadBalancer.servers]]
   url = "https://ap.ghost.org"
 
-# Dashboard on the LAN/tailnet entrypoint only — never websecure-proxied, so it
-# is unreachable through the public relay path.
+# Never websecure-proxied, and allowlisted because websecure itself now takes
+# traffic straight from the internet.
 [http.routers.traefik-dashboard]
   rule = "Host(`traefik.dbyte.xyz`)"
   service = "api@internal"
   entryPoints = ["websecure"]
+  middlewares = ["internal-only"]
 
 [http.middlewares.mediashare-auth.basicAuth]
   usersFile = "/etc/traefik/mediashare.htpasswd"

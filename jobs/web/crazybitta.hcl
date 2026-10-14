@@ -27,6 +27,7 @@ job "crazybittabiz" {
       tags = [
         "traefik.enable=true",
         "traefik.http.routers.crazybittabiz.rule=Host(`crazybitta.biz`)",
+        "traefik.http.routers.crazybittabiz.entrypoints=websecure,websecure-proxied",
       ]
     }
 

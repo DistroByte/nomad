@@ -38,6 +38,7 @@ job "molecule" {
       tags = [
         "traefik.enable=true",
         "traefik.http.routers.molecule.rule=Host(`molecule.dbyte.xyz`)",
+        "traefik.http.routers.molecule.entrypoints=websecure,websecure-proxied",
       ]
     }
 

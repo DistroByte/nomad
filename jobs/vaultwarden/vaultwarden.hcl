@@ -35,6 +35,7 @@ job "vaultwarden" {
       tags = [
         "traefik.enable=true",
         "traefik.http.routers.vaultwarden.rule=Host(`vault.dbyte.xyz`)",
+        "traefik.http.routers.vaultwarden.entrypoints=websecure,websecure-proxied",
       ]
 
       check {

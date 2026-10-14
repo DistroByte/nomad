@@ -21,9 +21,13 @@ auto_encrypt {
   allow_tls = true
 }
 
-# This ugly line is to get the hostnames of the other consul servers, excluding the current host.
-# Consul cannot join itself, so we need to exclude the current host.
-retry_join = ["{{ groups.nomad|difference([inventory_hostname]) | join('", "')}}"]
+# The other servers' ansible_host addresses, excluding this host (Consul cannot
+# join itself). Addresses rather than names: a bare name goes through the
+# resolv.conf search list and resolves first as <name>.node.consul, i.e. from
+# Consul's own catalog - which after a renumber still holds the old address,
+# and before the agent is up does not answer at all. The inventory is the one
+# place a renumber has to change anyway.
+retry_join = [{% for host in groups.nomad | difference([inventory_hostname]) %}"{{ hostvars[host].ansible_host }}"{{ ", " if not loop.last }}{% endfor %}]
 
 acl {
   enabled = false

@@ -27,6 +27,7 @@ job "website" {
       tags = [
         "traefik.enable=true",
         "traefik.http.routers.website.rule=Host(`james-hackett.ie`)",
+        "traefik.http.routers.website.entrypoints=websecure,websecure-proxied",
         "icon=https://james-hackett.ie/profile.webp",
       ]
     }

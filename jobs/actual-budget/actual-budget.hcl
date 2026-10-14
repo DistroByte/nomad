@@ -37,6 +37,7 @@ job "actual-budget" {
       tags = [
         "traefik.enable=true",
         "traefik.http.routers.actual-budget.rule=Host(`actual.dbyte.xyz`)",
+        "traefik.http.routers.actual-budget.middlewares=internal-only@file",
         "prometheus.io/scrape=false",
       ]
     }

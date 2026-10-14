@@ -4,23 +4,22 @@
 # load-bearing for the redesign; everything else (MX, TXT/SPF, vanity zones)
 # arrives via the import.
 #
-# Verified current shape (2026-09-08, apex targets updated at the 2026-09-14
-# ingress cutover):
-#   dbyte.xyz apex          A      -> home WAN (185.152.73.180, var.relay_ipv4)
-#   *.dbyte.xyz             CNAME  -> dbyte.xyz          <- the wildcard Phase 4 removes
-#   headscale.dbyte.xyz     A      -> worker (141.147.74.4)
-#   james-hackett.ie apex   A      -> home WAN
-#   photo.james-hackett.ie  CNAME  -> james-hackett.ie   (no wildcard on this zone)
+# LIVE STATE DIFFERS FROM THIS FILE (changed by hand via the API, 2026-10-14,
+# at the ERX cutover + Phase 4 ingress split — this root has never been
+# applied):
+#   dbyte.xyz / james-hackett.ie / ihatenixos.org / crazybitta.biz /
+#   nicecocks.biz apex  A  -> 185.152.73.180 (home, static), TTL 300
+#   pint.ing apex (NS1, not Cloudflare)  A -> 185.152.73.180, TTL 300
+#   *.dbyte.xyz wildcard CNAME           DELETED
+#   immich / request / share / mumble / ha / vault / molecule / gerry / video / drive
+#     .dbyte.xyz  A -> 185.152.73.180, TTL 300
+# i.e. records-phase4.tf.example is now live with home as the target and the
+# relay (132.226.210.138) as warm standby. Before the first apply: drop the
+# dbyte_wildcard resource and its import, rename the example to
+# records-public.tf, and set the ingress address variable to the home IP.
 #
-# Every apex now resolves to the house, so the wildcard drags every name —
-# mumble.dbyte.xyz included — onto the home router's forwarding table. That
-# matters for voice: see the note on mumble in ../README.md.
-#
-# The post-split per-name public set lives in records-phase4.tf.example.
-#
-# NOTE: *.ihatenixos.org and *.crazybitta.biz are the same wildcard-to-relay
-# pattern as *.dbyte.xyz — Phase 4 should account for all three zones, not
-# just dbyte.xyz.
+# Previously (2026-09-08 .. 2026-10-14) every apex pointed at the Oracle relay
+# and *.dbyte.xyz CNAMEd to the apex.
 
 variable "record_ids" {
   type        = map(string)

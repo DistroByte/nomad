@@ -95,6 +95,20 @@ other `10.x` network it touches, including work VPNs and any future VCN.
   will take a `10.42.0.x` lease the instant the ERX comes up, and you will be
   renumbering the cluster unplanned, at the worst possible moment. This step is
   what buys you control over the ordering.
+
+  **Check for a running DHCP client, not just the config file.** On 2026-10-14
+  hermes and zeus both had `iface ... inet static` in `/etc/network/interfaces`
+  *and* a `dhclient` left running from boot, from before the file was switched
+  to static. The Blacknight reservation handed out the same address, so nothing
+  looked wrong. 34 minutes after the swap zeus's lease came up for renewal,
+  dhclient took `10.42.0.107` from the ERX and deleted `192.168.0.3`, Consul and
+  Nomad lost quorum, and Nomad rescheduled half the cluster. Before the swap, on
+  every host: `pgrep -a dhclient` must be empty, and `ip -4 addr` must show the
+  address with `valid_lft forever`. To retire a stray dhclient without losing
+  the address, `kill -9` it (a clean stop runs the release script, which removes
+  the address) and then
+  `ip addr change <addr>/24 dev <if> valid_lft forever preferred_lft forever`,
+  or the kernel expires the address with the old lease.
 - **Take backups**: `consul snapshot save`, `nomad operator snapshot save`, a
   DSM config export, and the Pi-hole Teleporter export. Record the Consul and
   Nomad server IDs now — `/opt/consul/node-id` and `/opt/nomad/server/node-id`
@@ -307,21 +321,26 @@ set port-forward hairpin-nat enable
 set port-forward rule 1 description https
 set port-forward rule 1 original-port 443
 set port-forward rule 1 protocol tcp_udp
-set port-forward rule 1 forward-to address 10.42.0.4
+set port-forward rule 1 forward-to address 192.168.0.4
 set port-forward rule 1 forward-to port 443
 set port-forward rule 2 description http
 set port-forward rule 2 original-port 80
 set port-forward rule 2 protocol tcp_udp
-set port-forward rule 2 forward-to address 10.42.0.4
+set port-forward rule 2 forward-to address 192.168.0.4
 set port-forward rule 2 forward-to port 80
 set port-forward rule 3 description mumble
 set port-forward rule 3 original-port 64738
 set port-forward rule 3 protocol tcp_udp
-set port-forward rule 3 forward-to address 10.42.0.4
+set port-forward rule 3 forward-to address 192.168.0.4
 set port-forward rule 3 forward-to port 64738
 ```
 
 `tcp_udp` on 64738 is required — Mumble uses TCP for control and UDP for voice.
+
+**The forwards target hermes where it is, not where it will be.** hermes stays
+on `192.168.0.4` until step 6 — under Path A possibly for weeks — so forwarding
+to `10.42.0.4` sends all public ingress to an address nothing answers on from
+the moment of the swap. Repoint them in the same window that moves hermes.
 
 **Do not also write `service nat type destination` rules for these ports.** The
 two mechanisms are mutually exclusive per port; configuring both leaves which
@@ -388,6 +407,15 @@ edits to the surrounding stanza.
 
 ## 3. Swap the router
 
+What actually happened on 2026-10-14, for next time: PPPoE came up first time
+on VLAN 10 with the same public IPv4, and the port forwards worked from
+outside. Two faults surfaced in the first hour. The ERX→switch uplink (eth1)
+flapped ~44 times and settled at 100 Mb/s — a badly seated cable; reseating it
+restored 1000/full. Large packets were lost while it flapped, which briefly
+looked like an MTU or `hwnat` fault; it was neither. Then the stray-dhclient
+outage described in step 1. Check `show interfaces ethernet eth1 physical` and
+`show log | match "Port1 Link"` straight after cabling.
+
 Window: everything drops for the length of the PPPoE handshake, and public
 ingress drops until the forwards are verified.
 
@@ -418,6 +446,29 @@ leases roll; the infrastructure is untouched. Nothing below is urgent.
 
 ## 4. Renumber dionysus
 
+**Deferred — move dionysus with the cluster, not before it (decided
+2026-10-14).** It is not "just DNS": it is the block storage under most of the
+cluster.
+
+- Eleven Synology iSCSI CSI volumes (vaultwarden, paperless, homeassistant,
+  z2m, mqtt, unifi, unifi-mongo, photo, actual-budget, headscale, …) carry
+  `"dsm": "192.168.0.5"` in their registered volume context. Nomad will not
+  update that in place: each needs `nomad volume deregister` + `register` with
+  its job stopped (the LUN and its data are untouched).
+- The nodes hold live iSCSI sessions to `192.168.0.5:3260`. Changing the address
+  under running jobs removes their block devices mid-write.
+- `jobs/csi/synology-csi-controller.hcl` reaches DSM at `192.168.0.5:5000`.
+- All five NFS exports (`data`, `media`, `personal`, `homes`, `backups`) are
+  scoped to `192.168.0.0/24` only.
+- DSM's own resolver is `192.168.0.5`; Pi-hole runs on host networking, so it
+  follows the address. DSM firewall is off.
+
+That is the same blast radius as hermes and zeus, so it belongs in the same
+window: jobs stopped, CSI volumes re-registered, controller config updated,
+then Consul/Nomad (ideally after Phase 5). Until then `192.168.0.0/24` stays the
+infrastructure segment and `10.42.0.0/24` the client segment, routed by the ERX
+at no cost. The steps below are still the right ones for that window.
+
 This is the one that breaks DNS for everyone if it goes wrong, so do it alone.
 
 1. DSM → Control Panel → Network → Network Interface → LAN: static
@@ -430,7 +481,8 @@ This is the one that breaks DNS for everyone if it goes wrong, so do it alone.
    rule if you forget this.
 3. **DSM firewall rules**, same — add `10.42.0.0/16` alongside the old range.
 4. **Pi-hole**: update the ~20 `address=` lines that point service names at
-   `192.168.0.4`, and re-run `ansible-playbook ansible/playbooks/dns.yaml`
+   `192.168.0.4` (the matching `local=` lines carry only names and need no
+   change), and Pi-hole's own `dns.hosts` entry for `dionysus.internal`, and re-run `ansible-playbook ansible/playbooks/dns.yaml`
    (after step 7) to regenerate the `host-record=` lines. Check the listening
    mode still permits the new subnet.
 5. **iSCSI / synology-csi**: `nomad volume status <id>` on the Synology-backed
@@ -602,6 +654,32 @@ set interfaces switch switch0 vif 20 firewall in name IOT_IN
 Tag the port on the UniFi switch, write `IOT_IN` to permit DNS to `10.42.0.5`
 and the internet but not the rest of `10.42.0.0/16`, and leave the tailnet route
 alone — the advertised `/16` already covers it.
+
+## Order from here (revised 2026-10-14)
+
+1. ~~**Phase 4 ingress split**~~ — **done 2026-10-14.** Port 443 lands on Traefik's default entrypoint,
+   so private services answer anyone who sends the right `Host` header to the
+   home IP. The split adds the `internal-only` allowlist (including
+   `10.42.0.0/16`) and makes every public router opt in explicitly.
+2. ~~**Public DNS to the home IP**~~ — **done 2026-10-14.** Apexes and
+   immich/request/share/mumble point at `185.152.73.180` (TTL 300), the
+   `*.dbyte.xyz` wildcard is gone, private names are NXDOMAIN publicly. The
+   relay still serves every public router on `websecure-proxied` as warm
+   standby; failing over is flipping those records back to `132.226.210.138`.
+3. Phase 5 (third voter).
+4. Infrastructure renumber — dionysus, zeus, hermes together — then step 10.
+
+## Pi-hole split-horizon overrides
+
+Each `address=/name/192.168.0.4` line for a **leaf** name has a matching
+`local=/name/`. Without it dnsmasq still forwards AAAA and HTTPS queries for
+the name, caches Cloudflare's `*.dbyte.xyz` wildcard CNAME, and then answers A
+lookups from that CNAME — about a third of answers went to the relay instead of
+hermes. **Never add `local=` for a zone apex** (`james-hackett.ie`,
+`ihatenixos.org`, …): it answers *every* type for the whole zone locally, so
+SOA/MX/TXT vanish on the LAN. On 2026-10-14 that broke Traefik's ACME zone
+lookup and got `*.james-hackett.ie` rate-limited by Let's Encrypt. Apexes have
+real A records and never flipped, so they don't need it.
 
 ## Rollback
 
