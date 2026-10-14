@@ -1,5 +1,6 @@
-# One entry per record referenced in records.tf, keyed by the name used in
-# each resource's import block — see records.tf for the full key list.
+# One entry per record referenced in records.tf and records-public.tf, keyed by
+# the name used in each import block. The public set is keyed public_<name>,
+# e.g. public_immich, public_vault.
 record_ids = {
   dbyte_apex = "CHANGE-ME"
   # ...

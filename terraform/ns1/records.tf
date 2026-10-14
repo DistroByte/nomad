@@ -31,6 +31,6 @@ resource "ns1_record" "pint_ing_apex" {
   ttl    = 3600
 
   answers {
-    answer = var.relay_ipv4
+    answer = var.ingress_ipv4
   }
 }

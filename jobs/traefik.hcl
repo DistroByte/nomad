@@ -242,7 +242,7 @@ EOF
 # Port 443 is forwarded straight from the internet, so websecure carries public
 # and private traffic alike with real client addresses. Every private router
 # carries this; public ones opt in to both entrypoints instead. 10.42.0.0/16 is
-# the renumbered LAN (docs/ERX-Cutover.md) and also covers hairpin-NATed LAN
+# the renumbered LAN (docs/Network.md) and also covers hairpin-NATed LAN
 # clients, which arrive from the router's LAN address.
 [http.middlewares.internal-only.ipAllowList]
   sourceRange = [

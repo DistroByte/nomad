@@ -93,12 +93,11 @@ instance should be swapped for an always-free A1.Flex 1-OCPU/6GB first.
    [`cf-terraforming`](https://github.com/cloudflare/cf-terraforming)
    (`cf-terraforming generate --resource-type cloudflare_dns_record --zone <id>`
    and matching `import` output) per zone, tidy into `records.tf`.
-3. Today `*.dbyte.xyz` is a CNAME to the apex, whose A record is the relay —
-   which is why every private service name resolves publicly. The per-name
-   public record set replacing it is described in `records-phase4.tf.example`;
-   **do not apply it until the Traefik entrypoint split (plan Phase 4) has
-   shipped**, or private services become unreachable for clients that rely on
-   public DNS while still being routable.
+3. There is no `*.dbyte.xyz` wildcard: the publicly resolving dbyte.xyz names
+   are listed in `records-public.tf`, and every other name is NXDOMAIN on the
+   internet. Making a service public means adding it there *and* giving its
+   Traefik router `entrypoints=websecure,websecure-proxied` instead of the
+   `internal-only@file` middleware.
 
 ## NS1 import workflow
 
@@ -107,5 +106,5 @@ with `import` blocks already in place (NS1 record import ids are just
 `zone/domain/type`, no opaque ids to look up). With the key on the Vaultwarden
 item, `./tf.sh ns1 init && ./tf.sh ns1 plan` should show two imports and no
 changes. The apex A record points at
-`var.relay_ipv4`, so the UCG-cutover ingress flip is a one-variable change
-applied across the cloudflare and ns1 roots together.
+`var.ingress_ipv4`, so failing ingress over to the relay is a one-variable
+change applied across the cloudflare and ns1 roots together.

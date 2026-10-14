@@ -2,24 +2,8 @@
 # ../README.md) and tidy its output into this file until `terraform plan` is a
 # no-op. Only the records below are asserted from the start because they are
 # load-bearing for the redesign; everything else (MX, TXT/SPF, vanity zones)
-# arrives via the import.
-#
-# LIVE STATE DIFFERS FROM THIS FILE (changed by hand via the API, 2026-10-14,
-# at the ERX cutover + Phase 4 ingress split — this root has never been
-# applied):
-#   dbyte.xyz / james-hackett.ie / ihatenixos.org / crazybitta.biz /
-#   nicecocks.biz apex  A  -> 185.152.73.180 (home, static), TTL 300
-#   pint.ing apex (NS1, not Cloudflare)  A -> 185.152.73.180, TTL 300
-#   *.dbyte.xyz wildcard CNAME           DELETED
-#   immich / request / share / mumble / ha / vault / molecule / gerry / video / drive
-#     .dbyte.xyz  A -> 185.152.73.180, TTL 300
-# i.e. records-phase4.tf.example is now live with home as the target and the
-# relay (132.226.210.138) as warm standby. Before the first apply: drop the
-# dbyte_wildcard resource and its import, rename the example to
-# records-public.tf, and set the ingress address variable to the home IP.
-#
-# Previously (2026-09-08 .. 2026-10-14) every apex pointed at the Oracle relay
-# and *.dbyte.xyz CNAMEd to the apex.
+# arrives via the import. The per-name public dbyte.xyz set is in
+# records-public.tf.
 
 variable "record_ids" {
   type        = map(string)
@@ -38,8 +22,8 @@ resource "cloudflare_dns_record" "dbyte_apex" {
   zone_id = data.cloudflare_zones.dbyte.result[0].id
   name    = "dbyte.xyz"
   type    = "A"
-  content = var.relay_ipv4
-  ttl     = 1
+  content = var.ingress_ipv4
+  ttl     = 300
   proxied = false
 }
 
@@ -81,21 +65,6 @@ resource "cloudflare_dns_record" "headscale_aaaa" {
   name    = "headscale.dbyte.xyz"
   type    = "AAAA"
   content = "2603:c020:c014:4eff::10"
-  ttl     = 1
-  proxied = false
-}
-
-import {
-  to = cloudflare_dns_record.dbyte_wildcard
-  id = "${data.cloudflare_zones.dbyte.result[0].id}/${var.record_ids["dbyte_wildcard"]}"
-}
-# The wildcard Phase 4 replaces with the per-name public record set in
-# records-phase4.tf.example — do not remove until that ships.
-resource "cloudflare_dns_record" "dbyte_wildcard" {
-  zone_id = data.cloudflare_zones.dbyte.result[0].id
-  name    = "*.dbyte.xyz"
-  type    = "CNAME"
-  content = "dbyte.xyz"
   ttl     = 1
   proxied = false
 }
@@ -178,8 +147,8 @@ resource "cloudflare_dns_record" "jh_apex" {
   zone_id = data.cloudflare_zones.james_hackett.result[0].id
   name    = "james-hackett.ie"
   type    = "A"
-  content = var.relay_ipv4
-  ttl     = 1
+  content = var.ingress_ipv4
+  ttl     = 300
   proxied = false
 }
 
@@ -355,8 +324,8 @@ resource "cloudflare_dns_record" "ihatenixos_apex" {
   zone_id = data.cloudflare_zones.ihatenixos.result[0].id
   name    = "ihatenixos.org"
   type    = "A"
-  content = var.relay_ipv4
-  ttl     = 1
+  content = var.ingress_ipv4
+  ttl     = 300
   proxied = false
 }
 
@@ -364,7 +333,7 @@ import {
   to = cloudflare_dns_record.ihatenixos_wildcard
   id = "${data.cloudflare_zones.ihatenixos.result[0].id}/${var.record_ids["ihatenixos_wildcard"]}"
 }
-# Same wildcard-to-relay pattern as *.dbyte.xyz — see note at top of file.
+# CNAMEs the apex, so every name in the zone follows var.ingress_ipv4.
 resource "cloudflare_dns_record" "ihatenixos_wildcard" {
   zone_id = data.cloudflare_zones.ihatenixos.result[0].id
   name    = "*.ihatenixos.org"
@@ -438,8 +407,8 @@ resource "cloudflare_dns_record" "crazybitta_apex" {
   zone_id = data.cloudflare_zones.crazybitta.result[0].id
   name    = "crazybitta.biz"
   type    = "A"
-  content = var.relay_ipv4
-  ttl     = 1
+  content = var.ingress_ipv4
+  ttl     = 300
   proxied = false
 }
 
@@ -447,7 +416,7 @@ import {
   to = cloudflare_dns_record.crazybitta_wildcard
   id = "${data.cloudflare_zones.crazybitta.result[0].id}/${var.record_ids["crazybitta_wildcard"]}"
 }
-# Same wildcard-to-relay pattern as *.dbyte.xyz — see note at top of file.
+# CNAMEs the apex, so every name in the zone follows var.ingress_ipv4.
 resource "cloudflare_dns_record" "crazybitta_wildcard" {
   zone_id = data.cloudflare_zones.crazybitta.result[0].id
   name    = "*.crazybitta.biz"
@@ -482,8 +451,8 @@ resource "cloudflare_dns_record" "nicecocks_apex" {
   zone_id = data.cloudflare_zones.nicecocks.result[0].id
   name    = "nicecocks.biz"
   type    = "A"
-  content = var.relay_ipv4
-  ttl     = 1
+  content = var.ingress_ipv4
+  ttl     = 300
   proxied = false
 }
 

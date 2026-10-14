@@ -21,12 +21,8 @@ auto_encrypt {
   allow_tls = true
 }
 
-# The other servers' ansible_host addresses, excluding this host (Consul cannot
-# join itself). Addresses rather than names: a bare name goes through the
-# resolv.conf search list and resolves first as <name>.node.consul, i.e. from
-# Consul's own catalog - which after a renumber still holds the old address,
-# and before the agent is up does not answer at all. The inventory is the one
-# place a renumber has to change anyway.
+# Addresses, not names: a bare name resolves via <name>.node.consul, i.e. Consul's
+# own catalog, which is unavailable at startup and stale after a renumber.
 retry_join = [{% for host in groups.nomad | difference([inventory_hostname]) %}"{{ hostvars[host].ansible_host }}"{{ ", " if not loop.last }}{% endfor %}]
 
 acl {
