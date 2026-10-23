@@ -73,6 +73,13 @@ on the LAN, which broke Traefik's ACME zone lookup on 2026-10-14 and got
 `*.james-hackett.ie` rate-limited. Traefik's DNS challenge now uses public
 resolvers regardless.
 
+The pairs are needed for TCP and UDP routers too, not just `Host()` rules.
+Hairpin NAT to the home IP times out from `192.168.0.0/24`, because hermes
+answers on the same subnet and the reply bypasses the ERX, so a job that
+reaches a service by its public name fails without one. `mumble.dbyte.xyz` was
+missing until 2026-10-23, and gerry crash-looped on
+`failed to create mumble session` until it was added.
+
 ## Traps
 
 - **A static config file doesn't prove a static address.** hermes and zeus had
