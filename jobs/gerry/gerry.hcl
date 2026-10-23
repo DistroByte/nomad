@@ -49,7 +49,7 @@ job "gerry" {
       shutdown_delay = "5s"
 
       config {
-        image      = "ghcr.io/distrobyte/gerry:0.6.4"
+        image      = "ghcr.io/distrobyte/gerry:0.6.5"
         force_pull = true
         ports      = ["http"]
       }
