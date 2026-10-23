@@ -47,7 +47,7 @@ job "molecule" {
       shutdown_delay = "5s"
 
       config {
-        image      = "ghcr.io/distrobyte/molecule:0.9.5"
+        image      = "ghcr.io/distrobyte/molecule:0.9.6"
         force_pull = true
         ports      = ["http"]
 
