@@ -1,6 +1,5 @@
 .obsidian/workspace*.json
 .obsidian/graph.json
-jobs/scrapbook
 external/gatus/.env
 # terraform: state and credentials never leave the machine / backend bucket
 .terraform/
