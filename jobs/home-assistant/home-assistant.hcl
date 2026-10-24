@@ -11,6 +11,12 @@ job "home-assistant" {
     value     = "amd64"
   }
 
+  # The ConBee is plugged into zeus.
+  constraint {
+    attribute = "${node.unique.name}"
+    value     = "zeus"
+  }
+
   group "home-automation" {
     count = 1
     network {
