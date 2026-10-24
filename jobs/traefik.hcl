@@ -269,18 +269,6 @@ EOF
 [[http.services.video.loadBalancer.servers]]
   url = "http://192.168.0.5:8096/"
 
-# Home Assistant is public (remote access from the phone app). Its job also
-# says so (entrypoints tag), but changing any tag on that job forces a
-# destructive update, and the replacement cannot place while the old
-# allocation still holds the ConBee. Until it is redeployed, this shadows its
-# router (higher priority, same service) to put it on the relay entrypoint too.
-# Drop it once home-assistant has been redeployed with the tag.
-[http.routers.homeassistant-public]
-  rule = "Host(`ha.dbyte.xyz`)"
-  service = "hass@consulcatalog"
-  entryPoints = ["websecure", "websecure-proxied"]
-  priority = 1000
-
 [http.routers.photo-activitypub]
   rule = "Host(`photo.james-hackett.ie`) && PathPrefix(`/.ghost/activitypub/`)"
   service = "ghost-activitypub"
