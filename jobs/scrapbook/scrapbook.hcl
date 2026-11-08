@@ -39,7 +39,7 @@ job "scrapbook" {
       driver = "docker"
 
       config {
-        image = "ghost:6.71.0"
+        image = "ghost:6.75.0"
         ports = ["http"]
       }
 
