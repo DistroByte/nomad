@@ -9,6 +9,8 @@
 # Consul KV at tailscale/headplane/secret rather than generating a new one.
 
 headscale_deploy_dir: /opt/headscale
+# About the VM's RAM (1 GB on the Oracle free tier); see the swap block in the playbook
+headscale_swap_size: 1G
 headplane_cookie_secret: "{{ vault_headplane_cookie_secret }}"
 
 # --- Offsite state backup (restic → B2) -------------------------------------

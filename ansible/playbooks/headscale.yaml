@@ -27,6 +27,51 @@
     - '!hardware'
 
   tasks:
+    # With ~1 GB of RAM and no swap, a memory spike (unattended-upgrades on
+    # 2026-11-05) thrashed page cache for 7.5 hours without ever tripping the
+    # OOM killer, and headscale stopped answering until a hard reboot.
+    - name: Configure swap
+      tags: swap
+      block:
+        - name: Allocate the swap file
+          ansible.builtin.command:
+            cmd: fallocate -l {{ headscale_swap_size }} /swapfile
+            creates: /swapfile
+          register: headscale_swapfile
+
+        - name: Restrict the swap file to root
+          ansible.builtin.file:
+            path: /swapfile
+            owner: root
+            group: root
+            mode: "0600"
+          # A check run never allocates the file, so there is nothing to chmod yet
+          when: not (ansible_check_mode and headscale_swapfile.changed)
+
+        - name: Format the swap file
+          ansible.builtin.command: mkswap /swapfile
+          when: headscale_swapfile.changed  # noqa: no-handler
+          changed_when: true
+
+        - name: List active swap
+          ansible.builtin.command: swapon --show=NAME --noheadings
+          register: headscale_active_swap
+          changed_when: false
+          check_mode: false
+
+        - name: Enable the swap file
+          ansible.builtin.command: swapon /swapfile
+          when: "'/swapfile' not in headscale_active_swap.stdout_lines"
+          changed_when: true
+
+        - name: Enable the swap file at boot
+          ansible.posix.mount:
+            src: /swapfile
+            path: none
+            fstype: swap
+            opts: sw
+            state: present
+
     - name: Preseed iptables-persistent so installing it stays non-interactive
       ansible.builtin.debconf:
         name: iptables-persistent
