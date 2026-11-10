@@ -53,7 +53,7 @@ job "paperless" {
       }
 
       config {
-        image      = "ghcr.io/paperless-ngx/paperless-ngx:2.20.13"
+        image      = "ghcr.io/paperless-ngx/paperless-ngx:3.4.2"
         force_pull = true
         ports      = ["http"]
       }
@@ -66,7 +66,7 @@ job "paperless" {
 
       template {
         data = <<EOH
-PAPERLESS_SECRETKEY={{ key "paperless/env/secret" }}
+PAPERLESS_SECRET_KEY={{ key "paperless/env/secret" }}
 PAPERLESS_URL={{ key "paperless/env/url" }}
 PAPERLESS_ADMIN_USER={{ key "paperless/admin/user" }}
 PAPERLESS_ADMIN_PASSWORD={{ key "paperless/admin/password" }}
@@ -98,7 +98,7 @@ EOH
       driver = "docker"
 
       config {
-        image        = "ghcr.io/paperless-ngx/paperless-ngx:2.20.13"
+        image        = "ghcr.io/paperless-ngx/paperless-ngx:3.4.2"
         entrypoint   = ["/bin/sh"]
         args         = ["/local/export-loop.sh"]
         network_mode = "host"
@@ -120,7 +120,7 @@ EOH
         data = <<EOH
 PAPERLESS_DATA_DIR="/data/data"
 PAPERLESS_MEDIA_ROOT="/data/media"
-PAPERLESS_SECRETKEY={{ key "paperless/env/secret" }}
+PAPERLESS_SECRET_KEY={{ key "paperless/env/secret" }}
 HEARTBEAT_TOKEN={{ key "gatus/heartbeat-token" }}
 EOH
 
@@ -134,17 +134,21 @@ EOH
         perms       = "755"
         data        = <<EOH
 #!/bin/sh
-set -eu
+set -u
 
+# A failed export must not exit: a dead sibling task takes paperless-webserver
+# down with the whole alloc. Skipping the heartbeat lets Gatus raise it instead.
 while :; do
   # -c/-d keep the export incremental: unchanged documents are skipped and
-  # documents deleted in paperless are removed from the export.
-  python3 /usr/src/paperless/src/manage.py document_exporter /backup \
-    --compare-checksums --delete --no-progress-bar
-
-  curl -fsS -X POST --max-time 15 \
-    -H "Authorization: Bearer $HEARTBEAT_TOKEN" \
-    "http://observability.ts.dbyte.xyz:8080/api/v1/endpoints/backups_paperless/external?success=true" || true
+  # documents deleted in paperless are removed from the export. -f names files
+  # by document ID: title-derived names overflow the NAS share's 143-byte
+  # filename limit.
+  if python3 /usr/src/paperless/src/manage.py document_exporter /backup \
+    --compare-checksums --delete --use-filename-format --no-progress-bar; then
+    curl -fsS -X POST --max-time 15 \
+      -H "Authorization: Bearer $HEARTBEAT_TOKEN" \
+      "http://observability.ts.dbyte.xyz:8080/api/v1/endpoints/backups_paperless/external?success=true" || true
+  fi
 
   sleep 86400
 done
