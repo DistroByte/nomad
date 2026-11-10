@@ -131,7 +131,28 @@ job "home-assistant" {
         force_pull   = true
         network_mode = "host"
         command      = "mosquitto"
-        args         = ["-c", "/mosquitto-no-auth.conf"]
+        args         = ["-c", "/local/mosquitto.conf"]
+      }
+
+      # The image's /mosquitto-no-auth.conf has no persistence, so every restart
+      # dropped the retained HA discovery configs and devices vanished from HA
+      # until their publishers reconnected. Not /mosquitto/data: the image
+      # declares it a Docker VOLUME, which shadows the CSI mount with a fresh
+      # anonymous volume on every restart.
+      template {
+        destination = "local/mosquitto.conf"
+        data        = <<EOH
+listener 1883
+allow_anonymous true
+
+listener 9883
+protocol http_api
+http_dir /usr/share/mosquitto/dashboard
+
+persistence true
+persistence_location /mosquitto/persist/
+autosave_interval 60
+EOH
       }
 
       volume_mount {
