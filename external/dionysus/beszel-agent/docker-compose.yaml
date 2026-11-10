@@ -1,0 +1,23 @@
+# Beszel agent for dionysus (Synology DSM), the one host the Ansible playbook
+# (ansible/playbooks/beszel-agent.yaml) doesn't target: DSM rewrites systemd
+# units on update, so it runs as a container alongside the other compose
+# projects in /etc/docker-compose.
+#
+# Host networking puts the host's /proc/net and /proc/diskstats in view, so
+# CPU, memory, network and disk I/O are the host's. No /extra-filesystems mount
+# is needed for /volume1: Docker's data root lives on it, so the agent already
+# resolves its own root to dm-3 (cachedev_0) and reports the volume as the
+# system disk.
+#
+# Deployed by external/dionysus/deploy.sh.
+services:
+  beszel-agent:
+    image: henrygd/beszel-agent:0.21.1
+    container_name: beszel-agent
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      KEY: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOfSUZx0ETYvawvbtFEhYMglcCY6a30DfH4iLepF7D4u"
+      LISTEN: "192.168.0.5:45876"

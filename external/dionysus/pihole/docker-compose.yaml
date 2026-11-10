@@ -1,0 +1,39 @@
+services:
+  pihole:
+    container_name: pihole
+    image: pihole/pihole:latest
+    hostname: pihole
+    domainname: internal
+    cap_add:
+      - NET_ADMIN
+    dns:
+      - 127.0.0.1
+      - 1.1.1.1
+    network_mode: host
+#    networks:
+#      pihole_network:
+#        ipv4_address: 192.168.10.53
+    environment:
+      ServerIP: 192.168.0.5
+      VIRTUAL_HOST: pihole.internal
+      WEBPASSWORD: ''
+      FTLCONF_webserver_api_password: ''
+      WEB_PORT: 8081
+      PIHOLE_DOMAIN: internal
+      DNSMASQ_USER: root
+      DNSMASQ_LISTENING: local
+    restart: unless-stopped
+    volumes:
+      - "/volume1/data/pihole/config:/etc/pihole"
+      - "/volume1/data/pihole/dnsmasq:/etc/dnsmasq.d"
+
+networks:
+  pihole_network:                         # Reference to the network used in docker compose files
+    name: pihole_network                  # A user visible name of the network
+    driver: macvlan                       # Use the macvlan network driver
+    driver_opts:
+      parent: bond0                         # If open vSwitch is enabled use ovs_eth0 (or ovs_eth1 etc.)
+    ipam:
+      config:
+        - gateway: 192.168.10.1          # Gateway address
+          subnet: 192.168.10.0/24        # Specify subnet

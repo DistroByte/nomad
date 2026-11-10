@@ -1,0 +1,62 @@
+# Sonarr, Radarr and their indexer proxies. Jellyseerr (jobs/jellyseerr.hcl)
+# sends requests to Sonarr and Radarr at dionysus.internal:8989 and :7878.
+#
+# This was the "plex" compose project until 2026-11-10; Plex itself had long
+# been commented out. Its data still lives under /volume1/docker/plex, which is
+# why the paths say plex. FlareSolverr's /config is the old rutorrent directory.
+#
+# Deployed by external/dionysus/deploy.sh.
+x-common-env: &common-env
+  PUID: "1026"
+  PGID: "100"
+  TZ: Europe/Dublin
+
+services:
+  sonarr:
+    container_name: sonarr
+    image: linuxserver/sonarr
+    restart: always
+    network_mode: host
+    environment: *common-env
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /volume1/docker/plex/config/sonarr:/config
+      - /volume1/media/tv:/tv
+      - /volume1/docker/plex/downloads:/downloads
+
+  radarr:
+    container_name: radarr
+    image: linuxserver/radarr
+    restart: always
+    network_mode: host
+    environment: *common-env
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /volume1/docker/plex/config/radarr:/config
+      - /volume1/media/movies:/movies
+      - /volume1/docker/plex/downloads:/downloads
+
+  jackett:
+    container_name: jackett
+    image: linuxserver/jackett
+    restart: always
+    environment: *common-env
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /volume1/docker/plex/downloads/blackhole:/downloads
+      - /volume1/docker/plex/config/jackett:/config
+    ports:
+      - 9117:9117
+
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr
+    container_name: flaresolverr
+    environment:
+      PUID: "1026"
+      PGID: "100"
+    volumes:
+      - /volume1/docker/plex/config/rutorrent:/config
+      - /volume1/docker/plex/downloads:/downloads
+    ports:
+      - 8191:8191
+    restart: always
