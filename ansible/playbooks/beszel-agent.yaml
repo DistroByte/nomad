@@ -1,0 +1,87 @@
+---
+# Installs the Beszel agent (CPU, memory, disk usage and I/O, network,
+# temperatures, per-container stats) on every host. The hub is jobs/beszel and
+# dials each agent on :45876, authenticating with its SSH key; the agent only
+# accepts the hub's public key below, which is safe to commit.
+#
+# Each agent listens on one address only, never the wildcard:
+#
+#   * home nodes on their LAN address. br0 has a globally routable IPv6
+#     address and INPUT is ACCEPT, so a wildcard bind would put the agent on
+#     the internet.
+#   * the Oracle VMs on their tailnet address, which keeps it off the public
+#     interface without depending on the OCI security list.
+#
+# A tailnet address doesn't exist until tailscaled is up, so the agent can fail
+# its first start after boot; the drop-in keeps retrying instead of hitting
+# systemd's start limit and giving up.
+#
+# Deploy:
+#   ansible-playbook ansible/playbooks/beszel-agent.yaml
+- name: Install the Beszel agent
+  hosts: home:cloud
+  become: true
+  gather_facts: false
+  vars:
+    beszel_agent_version: 0.21.1
+    beszel_agent_sha256: b0a96ef35de1aafe492d1bff9f08e880f1ce7dc69b4f0ed477ba16a5feb15c21
+    beszel_hub_public_key: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOfSUZx0ETYvawvbtFEhYMglcCY6a30DfH4iLepF7D4u
+    beszel_agent_listen: "{{ tailnet_ipv4 if 'cloud' in group_names else ansible_host }}:45876"
+    beszel_agent_deb: /var/cache/beszel-agent_{{ beszel_agent_version }}_linux_amd64.deb
+  tasks:
+    # Written before the package so its postinst sees KEY= and skips the
+    # debconf prompt for one.
+    - name: Write the agent config
+      ansible.builtin.copy:
+        dest: /etc/beszel-agent.conf
+        mode: "0600"
+        content: |
+          KEY="{{ beszel_hub_public_key }}"
+          LISTEN={{ beszel_agent_listen }}
+      register: beszel_agent_config
+
+    - name: Download the agent package
+      ansible.builtin.get_url:
+        url: https://github.com/henrygd/beszel/releases/download/v{{ beszel_agent_version }}/beszel-agent_{{ beszel_agent_version }}_linux_amd64.deb
+        dest: "{{ beszel_agent_deb }}"
+        checksum: sha256:{{ beszel_agent_sha256 }}
+        mode: "0644"
+
+    - name: Install the agent package
+      ansible.builtin.apt:
+        deb: "{{ beszel_agent_deb }}"
+      environment:
+        DEBIAN_FRONTEND: noninteractive
+      register: beszel_agent_package
+
+    - name: Create the agent unit drop-in directory
+      ansible.builtin.file:
+        path: /etc/systemd/system/beszel-agent.service.d
+        state: directory
+        mode: "0755"
+
+    - name: Keep retrying until the listen address exists
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/beszel-agent.service.d/restart.conf
+        mode: "0644"
+        content: |
+          [Unit]
+          StartLimitIntervalSec=0
+
+          [Service]
+          Restart=always
+          RestartSec=10
+      register: beszel_agent_dropin
+
+    - name: Enable and start the agent
+      ansible.builtin.systemd_service:
+        name: beszel-agent
+        enabled: true
+        state: started
+        daemon_reload: "{{ beszel_agent_dropin is changed }}"
+
+    - name: Restart the agent to pick up changed config
+      ansible.builtin.systemd_service:
+        name: beszel-agent
+        state: restarted
+      when: beszel_agent_config is changed or beszel_agent_package is changed or beszel_agent_dropin is changed
