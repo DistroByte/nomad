@@ -1,0 +1,11 @@
+# Debian defaults the sshd jail to the systemd backend, whose journalmatch is
+# sshd.service; Ubuntu names the unit ssh.service, so the jail would see no
+# failures at all while reporting itself healthy. IPv6 needs nothing here:
+# Debian's nftables banaction bans from an inet table, covering v4 and v6.
+[sshd]
+enabled = true
+backend = auto
+logpath = /var/log/auth.log
+maxretry = 8
+bantime = 3600
+bantime.increment = true

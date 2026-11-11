@@ -1,0 +1,47 @@
+---
+# Bans SSH brute-forcers on the Oracle hosts over IPv4 and IPv6.
+#
+# The OCI security list allows all traffic from ::/0, so once the VNICs have
+# IPv6 addresses the host is the only thing rate-limiting SSH over v6.
+#
+# Deploy:
+#   ansible-playbook -i ansible/hosts ansible/playbooks/fail2ban.yaml
+- name: Deploy dual-stack fail2ban
+  hosts: cloud
+  become: true
+  gather_subset:
+    - '!hardware'
+
+  tasks:
+    - name: Install fail2ban
+      ansible.builtin.apt:
+        name: fail2ban
+        state: present
+        update_cache: true
+
+    - name: Deploy the sshd jail config
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/templates/fail2ban/sshd.local"
+        dest: /etc/fail2ban/jail.d/sshd.local
+        owner: root
+        group: root
+        mode: "0644"
+      register: fail2ban_config
+
+    - name: Validate the fail2ban configuration
+      ansible.builtin.command: fail2ban-client -t
+      changed_when: false
+
+    - name: Start fail2ban
+      ansible.builtin.systemd_service:
+        name: fail2ban
+        state: started
+        enabled: true
+
+    - name: Restart fail2ban when its config changed  # noqa: no-handler
+      # A conditional task rather than a handler, so a later failure cannot
+      # leave new config on disk with the old jails still running.
+      ansible.builtin.systemd_service:
+        name: fail2ban
+        state: restarted
+      when: fail2ban_config.changed
