@@ -107,9 +107,11 @@ endpoints:
     alerts:
       - type: ntfy
 
+  # dbyte.xyz resolves to the home IP, which the ERX forwards to hermes.
+  # headscale.dbyte.xyz is worker and is already covered by `headscale`.
   - name: hermes-https-port
     group: ingress
-    url: "tcp://headscale.dbyte.xyz:443"
+    url: "tcp://dbyte.xyz:443"
     interval: 30s
     conditions:
       - "[CONNECTED] == true"
